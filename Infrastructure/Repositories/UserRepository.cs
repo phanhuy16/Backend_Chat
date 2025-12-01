@@ -1,0 +1,65 @@
+﻿using Core.Entities;
+using Core.Interfaces.IRepositories;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+namespace Infrastructure.Repositories
+{
+    public class UserRepository : Repository<User>, IUserRepository
+    {
+        private readonly ILogger<UserRepository> _logger;
+
+        public UserRepository(ChatAppDbContext context, ILogger<UserRepository> logger)
+            : base(context)
+        {
+            _logger = logger;
+        }
+
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            try
+            {
+                return await _context.Users
+                    .FirstOrDefaultAsync(u => u.UserName == username);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi truy vấn User theo username: {Username}", username);
+                return null;
+            }
+        }
+
+        public async Task<User?> GetByEmailAsync(string email)
+        {
+            try
+            {
+                return await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email == email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi truy vấn User theo email: {Email}", email);
+                return null;
+            }
+        }
+
+        public async Task<IEnumerable<User>> SearchUsersAsync(string searchTerm)
+        {
+            try
+            {
+                return await _context.Users
+                    .Where(u =>
+                        (u.UserName != null && u.UserName.Contains(searchTerm)) ||
+                        (u.DisplayName != null && u.DisplayName.Contains(searchTerm))
+                    )
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi tìm kiếm user với keyword: {SearchTerm}", searchTerm);
+                return Enumerable.Empty<User>();
+            }
+        }
+    }
+}

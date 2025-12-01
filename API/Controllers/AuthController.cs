@@ -1,0 +1,235 @@
+﻿using Core.DTOs.Auth;
+using Core.Interfaces.IServices;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AuthController : ControllerBase
+    {
+        private readonly IAuthenticationService _authService;
+        private readonly ILogger<AuthController> _logger;
+
+        public AuthController(IAuthenticationService authService, ILogger<AuthController> logger)
+        {
+            _authService = authService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Đăng ký user mới
+        /// </summary>
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid registration request");
+                    return BadRequest(ModelState);
+                }
+
+                _logger.LogInformation("User registration attempt: {Username}", request.Username);
+
+                var result = await _authService.RegisterAsync(request);
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Registration failed for {Username}", request.Username);
+                    return BadRequest(result);
+                }
+
+                _logger.LogInformation("Registration successful for {Username}", request.Username);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during registration for {Username}", request.Username);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Đăng nhập user
+        /// </summary>
+        [HttpPost("login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid login request");
+                    return BadRequest(ModelState);
+                }
+
+                _logger.LogInformation("User login attempt: {Username}", request.Username);
+
+                var result = await _authService.LoginAsync(request);
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Login failed for {Username}", request.Username);
+                    return BadRequest(result);
+                }
+
+                _logger.LogInformation("Login successful for {Username}", request.Username);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login for {Username}", request.Username);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Refresh JWT token
+        /// </summary>
+        [HttpPost("refresh-token")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Invalid refresh token request");
+                    return BadRequest(ModelState);
+                }
+
+                if (string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.RefreshToken))
+                {
+                    return BadRequest(new { success = false, message = "Token and RefreshToken are required" });
+                }
+
+                var result = await _authService.RefreshTokenAsync(request);
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Refresh token failed");
+                    return Unauthorized(result);
+                }
+
+                _logger.LogInformation("Token refreshed successfully");
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Logout user
+        /// </summary>
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId <= 0)
+                {
+                    _logger.LogWarning("Logout attempt failed: User not found");
+                    return Unauthorized("User not found");
+                }
+
+                _logger.LogInformation("User logout attempt: {UserId}", userId);
+
+                var result = await _authService.LogoutAsync(userId);
+
+                if (!result)
+                {
+                    _logger.LogWarning("Logout failed for {UserId}", userId);
+                    return BadRequest("Logout failed");
+                }
+
+                _logger.LogInformation("Logout successful for {UserId}", userId);
+                return Ok(new { message = "Logout successful" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during logout");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Get current user info
+        /// </summary>
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId <= 0)
+                {
+                    _logger.LogWarning("GetCurrentUser failed: User not found");
+                    return Unauthorized("User not found");
+                }
+
+                var user = await _authService.GetCurrentUserAsync(userId);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("GetCurrentUser failed: User not found in service");
+                    return NotFound("User not found");
+                }
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Verify token
+        /// </summary>
+        [HttpGet("verify")]
+        [Authorize]
+        public IActionResult VerifyToken()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var username = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                return Ok(new
+                {
+                    valid = true,
+                    userId,
+                    username
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying token");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return userId;
+            }
+            return 0;
+        }
+    }
+}
