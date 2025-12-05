@@ -12,7 +12,7 @@ namespace Core.DTOs.Messages
         public int ConversationId { get; set; }
         public int SenderId { get; set; }
         public UserDto Sender { get; set; } = new UserDto();
-        public string Content { get; set; } = string.Empty;
+        public string? Content { get; set; }
         public MessageType MessageType { get; set; }
         public DateTime CreatedAt { get; set; }
         public ICollection<ReactionDto> Reactions { get; set; } = null!;

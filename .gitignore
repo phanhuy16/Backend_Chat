@@ -13,3 +13,4 @@ obj/
 [Bb]uild/
 appsettings.json
 Migrations
+wwwroot

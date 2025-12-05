@@ -7,7 +7,7 @@ namespace Core.Interfaces.IServices
 {
     public interface IMessageService
     {
-        Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string content, MessageType messageType);
+        Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType);
         Task<IEnumerable<MessageDto>> GetConversationMessagesAsync(int conversationId, int pageNumber, int pageSize);
         Task<MessageDto> EditMessageAsync(int messageId, string newContent);
         Task DeleteMessageAsync(int messageId);

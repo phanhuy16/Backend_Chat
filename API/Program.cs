@@ -111,6 +111,7 @@ builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 builder.Services.AddScoped<IReactionRepository, ReactionRepository>();
 builder.Services.AddScoped<IUserContactRepository, UserContactRepository>();
 builder.Services.AddScoped<IAttachmentRepository, AttachmentRepository>();
+builder.Services.AddScoped<IBlockedUserRepository, BlockedUserRepository>();
 
 // Services
 builder.Services.AddScoped<IUserService, UserService>();

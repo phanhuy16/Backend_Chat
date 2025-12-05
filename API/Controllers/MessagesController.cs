@@ -1,4 +1,5 @@
 ﻿using Core.DTOs.Messages;
+using Core.Enums;
 using Core.Interfaces.IServices;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,10 +45,10 @@ namespace API.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.Content))
+                if (request.MessageType == MessageType.Text && string.IsNullOrWhiteSpace(request.Content))
                 {
-                    _logger.LogWarning("Attempt to send empty message by user {SenderId}", request.SenderId);
-                    return BadRequest("Message content is required");
+                    _logger.LogWarning("Attempt to send empty text message by user {SenderId}", request.SenderId);
+                    return BadRequest("Message content is required for text messages");
                 }
 
                 var message = await _messageService.SendMessageAsync(

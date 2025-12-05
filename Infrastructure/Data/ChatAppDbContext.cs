@@ -18,6 +18,7 @@ namespace Infrastructure.Data
         public DbSet<MessageReaction> MessageReactions { get; set; } = null!;
         public DbSet<Attachment> Attachments { get; set; } = null!;
         public DbSet<UserContact> UserContacts { get; set; } = null!;
+        public DbSet<BlockedUser> BlockedUsers { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -51,7 +52,7 @@ namespace Infrastructure.Data
             modelBuilder.Entity<Message>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Content).IsRequired();
+                entity.Property(e => e.Content);
                 entity.Property(e => e.MessageType).HasMaxLength(20).HasDefaultValue(MessageType.Text);
                 entity.HasOne(e => e.Conversation).WithMany(c => c.Messages)
                     .HasForeignKey(e => e.ConversationId).OnDelete(DeleteBehavior.Cascade);
@@ -101,6 +102,25 @@ namespace Infrastructure.Data
             modelBuilder.Entity<UserContact>()
                 .HasIndex(uc => new { uc.SenderId, uc.ReceiverId })
                 .IsUnique();
+
+            // BlockedUser Configuration
+            modelBuilder.Entity<BlockedUser>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Blocker)
+                    .WithMany(u => u.BlockedUsers)
+                    .HasForeignKey(e => e.BlockerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.BlockedUserProfile)
+                    .WithMany(u => u.BlockedByUsers)
+                    .HasForeignKey(e => e.BlockedUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Ensure unique block relationship
+                entity.HasIndex(new[] { "BlockerId", "BlockedUserId" }).IsUnique();
+            });
         }
     }
 

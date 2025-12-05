@@ -73,16 +73,10 @@ namespace API.Hubs
         }
 
         // Send message to conversation
-        public async Task SendMessage(int conversationId, int senderId, string content, MessageType messageType = 0)
+        public async Task SendMessage(int conversationId, int senderId, string? content, MessageType messageType = 0)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(content))
-                {
-                    await Clients.Caller.SendAsync("Error", "Message content cannot be empty");
-                    return;
-                }
-
                 var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType);
 
                 var sender = await _userService.GetUserByIdAsync(senderId);

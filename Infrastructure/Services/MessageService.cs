@@ -185,7 +185,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string content, MessageType messageType)
+        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType)
         {
             try
             {

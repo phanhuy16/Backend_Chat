@@ -20,5 +20,7 @@ namespace Core.Entities
         public ICollection<MessageReaction> MessageReactions { get; set; } = new List<MessageReaction>();
         public ICollection<UserContact> UserContacts { get; set; } = new List<UserContact>();
         public ICollection<UserContact> ContactedByUsers { get; set; } = new List<UserContact>();
+        public ICollection<BlockedUser> BlockedUsers { get; set; } = new List<BlockedUser>();  // Người này chặn ai
+        public ICollection<BlockedUser> BlockedByUsers { get; set; } = new List<BlockedUser>();  // Ai chặn người này
     }
 }
