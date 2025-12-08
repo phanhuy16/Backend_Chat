@@ -19,6 +19,8 @@ namespace Infrastructure.Data
         public DbSet<Attachment> Attachments { get; set; } = null!;
         public DbSet<UserContact> UserContacts { get; set; } = null!;
         public DbSet<BlockedUser> BlockedUsers { get; set; } = null!;
+        public DbSet<Report> Reports { get; set; } = null!;
+        public DbSet<Call> Calls { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -121,6 +123,44 @@ namespace Infrastructure.Data
                 // Ensure unique block relationship
                 entity.HasIndex(new[] { "BlockerId", "BlockedUserId" }).IsUnique();
             });
+
+            // Configure Report
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.ReportedUser)
+                .WithMany()
+                .HasForeignKey(r => r.ReportedUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.Reporter)
+                .WithMany()
+                .HasForeignKey(r => r.ReporterId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.Conversation)
+                .WithMany()
+                .HasForeignKey(r => r.ConversationId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Configure Call
+            modelBuilder.Entity<Call>()
+                .HasOne(c => c.Initiator)
+                .WithMany()
+                .HasForeignKey(c => c.InitiatorId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Call>()
+                .HasOne(c => c.Receiver)
+                .WithMany()
+                .HasForeignKey(c => c.ReceiverId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Call>()
+                .HasOne(c => c.Conversation)
+                .WithMany()
+                .HasForeignKey(c => c.ConversationId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 

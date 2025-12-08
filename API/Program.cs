@@ -93,7 +93,7 @@ builder.Services.AddAuthentication(options =>
             var accessToken = context.Request.Query["access_token"];
 
             if (!string.IsNullOrEmpty(accessToken) &&
-                context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                (context.HttpContext.Request.Path.StartsWithSegments("/hub")))
             {
                 context.Token = accessToken;
             }
@@ -112,6 +112,8 @@ builder.Services.AddScoped<IReactionRepository, ReactionRepository>();
 builder.Services.AddScoped<IUserContactRepository, UserContactRepository>();
 builder.Services.AddScoped<IAttachmentRepository, AttachmentRepository>();
 builder.Services.AddScoped<IBlockedUserRepository, BlockedUserRepository>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
+builder.Services.AddScoped<ICallRepository, CallRepository>();
 
 // Services
 builder.Services.AddScoped<IUserService, UserService>();
@@ -121,6 +123,8 @@ builder.Services.AddScoped<IChatHubService, ChatHubService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IFriendService, FriendService>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<ICallService, CallService>();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" };
 
@@ -166,6 +170,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<ChatHub>("/hubs/chat");
+
+app.MapHub<ChatHub>("/hub/chat")
+    .RequireAuthorization();
+app.MapHub<CallHub>("/hub/calls")
+    .RequireAuthorization();
 
 app.Run();

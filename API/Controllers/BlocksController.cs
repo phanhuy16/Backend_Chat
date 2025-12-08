@@ -111,6 +111,29 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet("check-mutual/{userId1}/{userId2}")]
+        public async Task<IActionResult> IsUserBlockedMutual(int userId1, int userId2)
+        {
+            try
+            {
+                // Kiểm tra cả hai hướng block
+                var isBlocked = await _blockedUserRepository.IsUserBlockedAsync(userId1, userId2);
+                var blockInfo = isBlocked
+                    ? await _blockedUserRepository.GetBlockerInfoAsync(userId1, userId2)
+                    : null;
 
+                return Ok(new
+                {
+                    isBlocked = isBlocked,
+                    // Return blocker ID so UI knows who blocked whom
+                    blockerId = blockInfo?.BlockerId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking mutual block status");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }

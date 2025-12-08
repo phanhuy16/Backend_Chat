@@ -76,5 +76,51 @@ namespace Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<bool> IsUserBlockedAsync(int userId1, int userId2)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Checking if users are blocked. UserId1: {UserId1}, UserId2: {UserId2}",
+                    userId1, userId2);
+
+                // Check both directions:
+                // 1. userId1 blocked userId2 (userId1 -> userId2)
+                // 2. userId2 blocked userId1 (userId2 -> userId1)
+                var isBlocked = await _context.BlockedUsers
+                    .AnyAsync(b =>
+                        (b.BlockerId == userId1 && b.BlockedUserId == userId2) ||
+                        (b.BlockerId == userId2 && b.BlockedUserId == userId1));
+
+                return isBlocked;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error checking if users are blocked. UserId1: {UserId1}, UserId2: {UserId2}",
+                    userId1, userId2);
+                throw;
+            }
+        }
+
+        public async Task<BlockedUser?> GetBlockerInfoAsync(int userId1, int userId2)
+        {
+            try
+            {
+                var blockRecord = await _context.BlockedUsers
+                    .Include(b => b.Blocker)
+                    .FirstOrDefaultAsync(b =>
+                        (b.BlockerId == userId1 && b.BlockedUserId == userId2) ||
+                        (b.BlockerId == userId2 && b.BlockedUserId == userId1));
+
+                return blockRecord;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting blocker info");
+                throw;
+            }
+        }
     }
 }

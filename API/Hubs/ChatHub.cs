@@ -1,5 +1,6 @@
 ﻿using Core.DTOs.ChatHub;
 using Core.Enums;
+using Core.Interfaces.IRepositories;
 using Core.Interfaces.IServices;
 using Microsoft.AspNetCore.SignalR;
 
@@ -11,17 +12,20 @@ namespace API.Hubs
         private readonly IConversationService _conversationService;
         private readonly IChatHubService _chatHubService;
         private readonly IUserService _userService;
+        private readonly IBlockedUserRepository _blockedUserRepository;
         private readonly ILogger<ChatHub> _logger;
 
-        public ChatHub(IMessageService messageService, IUserService userService, IConversationService conversationService, IChatHubService chatHubService, ILogger<ChatHub> logger)
+        public ChatHub(IMessageService messageService, IUserService userService, IConversationService conversationService, IChatHubService chatHubService, IBlockedUserRepository blockedUserRepository, ILogger<ChatHub> logger)
         {
             _messageService = messageService;
             _conversationService = conversationService;
             _chatHubService = chatHubService;
             _userService = userService;
+            _blockedUserRepository = blockedUserRepository;
             _logger = logger;
         }
 
+        // Message 
         // User joins a conversation
         public async Task JoinConversation(int conversationId, int userId)
         {
@@ -77,6 +81,39 @@ namespace API.Hubs
         {
             try
             {
+                var conversation = await _conversationService.GetConversationAsync(conversationId);
+
+                if (conversation == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Conversation not found");
+                    return;
+                }
+
+                if (conversation.ConversationType == ConversationType.Direct)
+                {
+                    // Get the other member ID
+                    var otherMemberId = conversation.Members
+                        .FirstOrDefault(m => m.Id != senderId)?.Id;
+
+                    if (otherMemberId == null)
+                    {
+                        await Clients.Caller.SendAsync("Error", "Invalid conversation members");
+                        return;
+                    }
+
+                    // Check if sender is blocked (2-way check)
+                    var isBlocked = await _blockedUserRepository.IsUserBlockedAsync(senderId, otherMemberId.Value);
+
+                    if (isBlocked)
+                    {
+                        await Clients.Caller.SendAsync("Error", "Không thể gửi tin nhắn - bạn đã bị chặn hoặc đã chặn người dùng này");
+                        _logger.LogWarning($"User {senderId} attempted to send message in blocked conversation with {otherMemberId}");
+                        return;
+                    }
+                }
+
+                // For group conversations, no block check needed (can implement group-specific rules if needed)
+
                 var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType);
 
                 var sender = await _userService.GetUserByIdAsync(senderId);
@@ -247,13 +284,6 @@ namespace API.Hubs
             }
         }
 
-        // Disconnect handler
-        public override async Task OnDisconnectedAsync(Exception? exception)
-        {
-            await _chatHubService.RemoveAllUserConnectionsAsync(Context.ConnectionId);
-            await base.OnDisconnectedAsync(exception);
-        }
-
         // Mark message as read
         public async Task MarkAsRead(int conversationId, int messageId, int userId)
         {
@@ -308,5 +338,13 @@ namespace API.Hubs
                 _logger.LogError($"❌ Error notifying new conversation: {ex.Message}");
             }
         }
+
+        // Disconnect handler
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            await _chatHubService.RemoveAllUserConnectionsAsync(Context.ConnectionId);
+            await base.OnDisconnectedAsync(exception);
+        }
     }
 }
+
