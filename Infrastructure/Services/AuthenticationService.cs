@@ -3,6 +3,7 @@ using Core.Entities;
 using Core.Enums;
 using Core.Interfaces.IRepositories;
 using Core.Interfaces.IServices;
+using Google.Apis.Auth;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -246,6 +247,72 @@ namespace Infrastructure.Services
             {
                 _logger.LogError(ex, "Lỗi khi đăng ký user {Username}", request.Username);
                 return new AuthResponse { Success = false, Message = "Error during registration" };
+            }
+        }
+
+        public async Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request)
+        {
+            try
+            {
+                var settings = new GoogleJsonWebSignature.ValidationSettings()
+                {
+                    // Điền Client ID của bạn từ Google Console vào appsettings.json
+                    Audience = new List<string> { _configuration["Authentication:Google:ClientId"]! }
+                };
+
+                // 1. Xác thực ID Token gửi từ Frontend
+                var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
+
+                // 2. Kiểm tra xem user đã tồn tại chưa (dựa trên Email)
+                var user = await _userRepository.GetByEmailAsync(payload.Email);
+
+                if (user == null)
+                {
+                    // 3. Nếu chưa có, tạo user mới
+                    user = new User
+                    {
+                        UserName = payload.Email, // Hoặc logic tạo username riêng
+                        Email = payload.Email,
+                        DisplayName = payload.Name,
+                        Avatar = payload.Picture,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        Status = StatusUser.Online,
+                        // Pass hash có thể để trống hoặc chuỗi ngẫu nhiên vì login qua Google
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString())
+                    };
+                    await _userRepository.AddAsync(user);
+                }
+
+                // 4. Tạo JWT token giống như hàm Login thông thường
+                var token = GenerateJwtToken(user);
+                var refreshToken = GenerateRefreshToken();
+
+                user.RefreshToken = refreshToken;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+                user.Status = StatusUser.Online;
+
+                await _userRepository.UpdateAsync(user);
+
+                return new AuthResponse
+                {
+                    Success = true,
+                    Message = "Google login successful",
+                    User = MapToUserAuthDto(user),
+                    Token = token,
+                    RefreshToken = refreshToken,
+                    ExpiresIn = DateTime.UtcNow.AddHours(1)
+                };
+            }
+            catch (InvalidJwtException ex)
+            {
+                _logger.LogError(ex, "Google token validation failed");
+                return new AuthResponse { Success = false, Message = "Invalid Google Token" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Google login");
+                return new AuthResponse { Success = false, Message = "Internal server error during Google login" };
             }
         }
 

@@ -163,6 +163,21 @@ namespace API.Controllers
             }
         }
 
+        [HttpPost("google-login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            if (string.IsNullOrEmpty(request.IdToken))
+                return BadRequest("IdToken is required");
+
+            var result = await _authService.LoginWithGoogleAsync(request);
+
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+
         /// <summary>
         /// Get current user info
         /// </summary>

@@ -9,5 +9,6 @@ namespace Core.Interfaces.IServices
         Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request);
         Task<bool> LogoutAsync(int userId);
         Task<UserAuthDto?> GetCurrentUserAsync(int userId);
+        Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request);
     }
 }

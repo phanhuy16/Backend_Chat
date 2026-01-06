@@ -432,11 +432,11 @@ namespace API.Hubs
 
             // Try different claim names (common variations)
             var userIdClaim =
-                Context.User.FindFirst("id")?.Value ??           // Claim name: "id"
-                Context.User.FindFirst("sub")?.Value ??          // Claim name: "sub"
-                Context.User.FindFirst("userId")?.Value ??       // Claim name: "userId"
-                Context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ??  // Standard
-                Context.User.FindFirst("oid")?.Value;            // Azure AD
+                Context.User.FindFirst("id")?.Value ??
+                Context.User.FindFirst("sub")?.Value ??
+                Context.User.FindFirst("userId")?.Value ??
+                Context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                Context.User.FindFirst("oid")?.Value;
 
             if (string.IsNullOrEmpty(userIdClaim))
             {
