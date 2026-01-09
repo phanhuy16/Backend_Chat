@@ -245,7 +245,8 @@ namespace Infrastructure.Services
                 DisplayName = user.DisplayName,
                 Avatar = user.Avatar,
                 //Bio = user.Bio,
-                Status = user.Status
+                Status = user.Status,
+                LastActiveAt = user.UpdatedAt
             };
         }
     }

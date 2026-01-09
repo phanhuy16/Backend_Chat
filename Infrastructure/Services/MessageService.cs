@@ -66,6 +66,9 @@ namespace Infrastructure.Services
                 };
 
                 await _reactionRepository.AddAsync(reaction);
+                
+                user.UpdatedAt = DateTime.UtcNow;
+                await _userRepository.UpdateAsync(user);
 
                 message.UpdatedAt = DateTime.UtcNow;
                 await _messageRepository.UpdateAsync(message);
@@ -202,6 +205,9 @@ namespace Infrastructure.Services
                 };
 
                 await _messageRepository.AddAsync(message);
+
+                sender!.UpdatedAt = DateTime.UtcNow;
+                await _userRepository.UpdateAsync(sender);
 
                 var savedMessage = await _messageRepository.GetByIdAsync(message.Id);
 

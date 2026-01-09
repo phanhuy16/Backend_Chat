@@ -88,7 +88,7 @@ namespace Infrastructure.Services
                     User = MapToUserAuthDto(user),
                     Token = token,
                     RefreshToken = refreshToken,
-                    ExpiresIn = DateTime.UtcNow.AddHours(1)
+                    ExpiresIn = DateTime.UtcNow.AddMinutes(30)
                 };
             }
             catch (Exception ex)
@@ -169,7 +169,7 @@ namespace Infrastructure.Services
                     Token = newToken,
                     User = MapToUserAuthDto(user),
                     RefreshToken = newRefreshToken,
-                    ExpiresIn = DateTime.UtcNow.AddHours(1)
+                    ExpiresIn = DateTime.UtcNow.AddMinutes(30)
                 };
             }
             catch (Exception ex)
@@ -240,7 +240,7 @@ namespace Infrastructure.Services
                     User = MapToUserAuthDto(user),
                     Token = token,
                     RefreshToken = refreshToken,
-                    ExpiresIn = DateTime.UtcNow.AddHours(1)
+                    ExpiresIn = DateTime.UtcNow.AddMinutes(30)
                 };
             }
             catch (Exception ex)
@@ -301,7 +301,7 @@ namespace Infrastructure.Services
                     User = MapToUserAuthDto(user),
                     Token = token,
                     RefreshToken = refreshToken,
-                    ExpiresIn = DateTime.UtcNow.AddHours(1)
+                    ExpiresIn = DateTime.UtcNow.AddMinutes(30)
                 };
             }
             catch (InvalidJwtException ex)
@@ -334,7 +334,7 @@ namespace Infrastructure.Services
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(1),
+                expires: DateTime.UtcNow.AddMinutes(30),
                 signingCredentials: credentials
             );
 
