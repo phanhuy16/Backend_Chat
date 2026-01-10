@@ -23,6 +23,10 @@ namespace API.Hubs
         private static readonly ConcurrentDictionary<string, Call> ActiveCalls =
             new ConcurrentDictionary<string, Call>();
 
+        // Theo dõi thành viên trong cuộc gọi nhóm: callId -> list of userId
+        private static readonly ConcurrentDictionary<string, HashSet<int>> GroupCallMembers =
+            new ConcurrentDictionary<string, HashSet<int>>();
+
         public CallHub(
             IChatHubService chatHubService,
             IUserService userService,
@@ -169,6 +173,114 @@ namespace API.Hubs
             {
                 _logger.LogError($"Error initiating call: {ex.Message}");
                 await Clients.Caller.SendAsync("Error", $"Error initiating call: {ex.Message}");
+            }
+        }
+
+        // Initiate Group Call
+        public async Task InitiateGroupCall(int conversationId, string callType, List<int> memberIds)
+        {
+            try
+            {
+                var initiatorId = GetUserIdFromContext();
+                if (initiatorId == 0) return;
+
+                if (!Enum.TryParse<CallType>(callType, true, out var parsedCallType))
+                {
+                    await Clients.Caller.SendAsync("Error", "Invalid call type");
+                    return;
+                }
+
+                var initiator = await _userService.GetUserByIdAsync(initiatorId);
+                var callId = $"group_call_{conversationId}_{DateTime.UtcNow.Ticks}";
+
+                _logger.LogInformation($"Group call initiated in conversation {conversationId} by {initiatorId}");
+
+                // Register the group call and its initial participants (the initiator)
+                GroupCallMembers.TryAdd(callId, new HashSet<int> { initiatorId });
+
+                // Notify all online members except initiator
+                foreach (var memberId in memberIds)
+                {
+                    if (memberId == initiatorId) continue;
+
+                    if (UserConnections.TryGetValue(memberId, out var connectionId))
+                    {
+                        await Clients.Client(connectionId).SendAsync("IncomingGroupCall", new
+                        {
+                            callId = callId,
+                            callerId = initiatorId,
+                            callerName = initiator?.DisplayName ?? initiator?.UserName,
+                            callerAvatar = initiator?.Avatar,
+                            conversationId = conversationId,
+                            callType = parsedCallType.ToString(),
+                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                        });
+                    }
+                }
+
+                await Clients.Caller.SendAsync("CallInitiated", new
+                {
+                    callId = callId,
+                    status = "Ringing",
+                    isGroup = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error initiating group call: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", $"Error initiating group call: {ex.Message}");
+            }
+        }
+
+        // Join Ongoing Group Call
+        public async Task JoinGroupCall(int conversationId, string callId)
+        {
+            try
+            {
+                var userId = GetUserIdFromContext();
+                if (userId == 0) return;
+
+                _logger.LogInformation($"User {userId} joining group call {callId}");
+
+                if (GroupCallMembers.TryGetValue(callId, out var participants))
+                {
+                    var user = await _userService.GetUserByIdAsync(userId);
+                    var displayName = user?.DisplayName ?? user?.UserName ?? $"User {userId}";
+
+                    // 1. Notify existing participants about the newcomer
+                    // Existing participants will each send an offer to this newcomer
+                    List<int> currentParticipants;
+                    lock (participants)
+                    {
+                        currentParticipants = participants.ToList();
+                        participants.Add(userId);
+                    }
+
+                    foreach (var participantId in currentParticipants)
+                    {
+                        if (participantId == userId) continue;
+
+                        if (UserConnections.TryGetValue(participantId, out var connectionId))
+                        {
+                            await Clients.Client(connectionId).SendAsync("UserJoinedGroupCall", new
+                            {
+                                callId = callId,
+                                userId = userId,
+                                displayName = displayName
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning($"Group call {callId} not found in active tracking");
+                    // If not found, create it (might have been lost on server restart)
+                    GroupCallMembers.TryAdd(callId, new HashSet<int> { userId });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error joining group call: {ex.Message}");
             }
         }
 
@@ -378,6 +490,18 @@ namespace API.Hubs
                         status = "Offline",
                         timestamp = DateTime.UtcNow
                     });
+
+                    // Remove from all group calls
+                    foreach (var callEntry in GroupCallMembers)
+                    {
+                        lock (callEntry.Value)
+                        {
+                            if (callEntry.Value.Remove(userId))
+                            {
+                                _logger.LogInformation($"User {userId} removed from group call record {callEntry.Key}");
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
