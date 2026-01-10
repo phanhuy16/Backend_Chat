@@ -372,6 +372,35 @@ namespace API.Hubs
             }
         }
 
+        // Chấp nhận cuộc gọi (1-on-1)
+        public async Task AcceptCall(int callerId)
+        {
+            try
+            {
+                var receiverId = GetUserIdFromContext();
+                if (receiverId == 0) return;
+
+                if (!UserConnections.TryGetValue(callerId, out var callerConnectionId))
+                {
+                    _logger.LogWarning($"Caller {callerId} not found");
+                    return;
+                }
+
+                _logger.LogInformation($"Call accepted by user {receiverId} from {callerId}");
+
+                // Thông báo tới caller rằng cuộc gọi đã được chấp nhận
+                await Clients.Client(callerConnectionId).SendAsync("CallAccepted", new
+                {
+                    acceptedBy = receiverId,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error accepting call: {ex.Message}");
+            }
+        }
+
         // Từ chối cuộc gọi
         public async Task RejectCall(int callerId)
         {
