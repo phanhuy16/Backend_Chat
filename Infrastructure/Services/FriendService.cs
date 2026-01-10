@@ -98,7 +98,7 @@ namespace Infrastructure.Services
             }
         }
 
-        // Get pending friend requests
+        // Get pending friend requests (received)
         public async Task<IEnumerable<FriendRequestDto>> GetPendingRequestsAsync(int userId)
         {
             try
@@ -109,6 +109,21 @@ namespace Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error getting pending requests for user {userId}");
+                throw;
+            }
+        }
+
+        // Get sent friend requests
+        public async Task<IEnumerable<FriendRequestDto>> GetSentRequestsAsync(int userId)
+        {
+            try
+            {
+                var requests = await _userContactRepository.GetSentRequestsAsync(userId);
+                return requests.Select(r => MapToFriendRequestDto(r)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting sent requests for user {userId}");
                 throw;
             }
         }
@@ -223,6 +238,8 @@ namespace Infrastructure.Services
                 SenderName = contact.Sender?.DisplayName ?? contact.Sender?.UserName ?? "Unknown",
                 SenderAvatar = contact.Sender?.Avatar ?? "",
                 ReceiverId = contact.ReceiverId,
+                ReceiverName = contact.Receiver?.DisplayName ?? contact.Receiver?.UserName ?? "Unknown",
+                ReceiverAvatar = contact.Receiver?.Avatar ?? "",
                 Status = contact.Status,
                 CreatedAt = contact.CreatedAt
             };

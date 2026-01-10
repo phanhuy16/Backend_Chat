@@ -7,8 +7,11 @@ namespace Core.Interfaces.IRepositories
         // Get friend request between two users
         Task<UserContact?> GetFriendRequestAsync(int senderId, int receiverId);
 
-        // Get pending friend requests for a user
+        // Get pending friend requests for a user (received)
         Task<IEnumerable<UserContact>> GetPendingRequestsAsync(int userId);
+
+        // Get sent friend requests for a user
+        Task<IEnumerable<UserContact>> GetSentRequestsAsync(int userId);
 
         // Get accepted friends for a user
         Task<IEnumerable<UserContact>> GetFriendsAsync(int userId);

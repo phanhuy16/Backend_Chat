@@ -6,5 +6,6 @@ namespace Core.Interfaces.IRepositories
     {
         Task<IEnumerable<Attachment>> GetMessageAttachmentsAsync(int messageId);
         Task<Attachment> GetAttachmentByIdAsync(int attachmentId);
+        Task<IEnumerable<Attachment>> GetConversationAttachmentsAsync(int conversationId);
     }
 }

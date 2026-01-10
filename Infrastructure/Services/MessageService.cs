@@ -105,6 +105,41 @@ namespace Infrastructure.Services
             }
         }
 
+        public async Task DeleteMessageForMeAsync(int messageId, int userId)
+        {
+            try
+            {
+                var message = await _messageRepository.GetByIdAsync(messageId);
+                if (message == null)
+                {
+                    _logger.LogWarning("Message {MessageId} not found for deletion for user {UserId}", messageId, userId);
+                    return;
+                }
+
+                // Check if already deleted for this user
+                // (Optional: can optimize with a specific repository method if needed)
+                
+                var deletedForUser = new MessageDeletedForUser
+                {
+                    MessageId = messageId,
+                    UserId = userId,
+                    DeletedAt = DateTime.UtcNow
+                };
+
+                // We need to add this to the context. 
+                // Since MessageService doesn't have MessageDeletedForUserRepository, 
+                // we might need to add it or use the context via MessageRepository if it exposes it.
+                // Looking at MessageRepository, it inherits from Repository<Message> which has _context.
+                
+                await _messageRepository.AddDeletedForUserAsync(deletedForUser);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting message {MessageId} for user {UserId}", messageId, userId);
+                throw;
+            }
+        }
+
         public async Task<MessageDto> EditMessageAsync(int messageId, string newContent)
         {
             try
@@ -130,12 +165,12 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<IEnumerable<MessageDto>> GetConversationMessagesAsync(int conversationId, int pageNumber, int pageSize)
+        public async Task<IEnumerable<MessageDto>> GetConversationMessagesAsync(int conversationId, int userId, int pageNumber, int pageSize)
         {
             try
             {
-                var messages = await _messageRepository.GetConversationMessagesAsync(conversationId, pageNumber, pageSize);
-                return messages.Select(m => MapToMessageDto(m)).ToList();
+                var messages = await _messageRepository.GetConversationMessagesAsync(conversationId, userId, pageNumber, pageSize);
+                return messages.Select(m => MapToMessageDto(m, userId)).ToList();
             }
             catch (Exception ex)
             {
@@ -225,7 +260,7 @@ namespace Infrastructure.Services
             }
         }
 
-        private MessageDto MapToMessageDto(Message message)
+        private MessageDto MapToMessageDto(Message message, int currentUserId = 0)
         {
             return new MessageDto
             {
@@ -255,7 +290,9 @@ namespace Infrastructure.Services
                     FileName = a.FileName,
                     FileSize = a.FileSize,
                     FileUrl = a.FileUrl
-                }).ToList()
+                }).ToList(),
+                IsDeleted = message.IsDeleted,
+                IsDeletedForMe = currentUserId != 0 && message.DeletedForUsers.Any(dfu => dfu.UserId == currentUserId)
             };
         }
 

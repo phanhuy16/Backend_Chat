@@ -20,5 +20,6 @@ namespace Core.Entities
         // Navigation properties
         public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();
         public ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
+        public ICollection<MessageDeletedForUser> DeletedForUsers { get; set; } = new List<MessageDeletedForUser>();
     }
 }

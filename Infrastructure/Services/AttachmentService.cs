@@ -115,5 +115,24 @@ namespace Infrastructure.Services
                 return false;
             }
         }
+        public async Task<IEnumerable<AttachmentDto>> GetAttachmentsByConversationIdAsync(int conversationId)
+        {
+            try
+            {
+                var attachments = await _attachmentRepository.GetConversationAttachmentsAsync(conversationId);
+                return attachments.Select(a => new AttachmentDto
+                {
+                    Id = a.Id,
+                    FileName = a.FileName,
+                    FileUrl = a.FileUrl,
+                    FileSize = a.FileSize
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting attachments for conversation {conversationId}: {ex.Message}");
+                throw;
+            }
+        }
     }
 }

@@ -7,5 +7,6 @@ namespace Core.Interfaces.IServices
     {
         Task<AttachmentDto> SaveAttachmentAsync(int messageId, IFormFile file);
         Task<bool> DeleteAttachmentAsync(int attachmentId);
+        Task<IEnumerable<AttachmentDto>> GetAttachmentsByConversationIdAsync(int conversationId);
     }
 }

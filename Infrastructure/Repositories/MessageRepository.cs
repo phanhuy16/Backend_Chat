@@ -16,7 +16,7 @@ namespace Infrastructure.Repositories
             _logger = logger;
         }
 
-        public async Task<IEnumerable<Message>> GetConversationMessagesAsync(int conversationId, int pageNumber, int pageSize)
+        public async Task<IEnumerable<Message>> GetConversationMessagesAsync(int conversationId, int userId, int pageNumber, int pageSize)
         {
             try
             {
@@ -25,10 +25,11 @@ namespace Infrastructure.Repositories
                     conversationId, pageNumber, pageSize);
 
                 var messages = await _context.Messages
-                    .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+                    .Where(m => m.ConversationId == conversationId)
                     .Include(m => m.Sender)
                     .Include(m => m.Reactions)
                     .Include(m => m.Attachments)
+                    .Include(m => m.DeletedForUsers) // Need to include this to check in service
                     .OrderByDescending(m => m.CreatedAt)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
@@ -72,6 +73,21 @@ namespace Infrastructure.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching message with reactions. MessageId={MessageId}", messageId);
+                throw;
+            }
+        }
+
+        public async Task AddDeletedForUserAsync(MessageDeletedForUser deletedForUser)
+        {
+            try
+            {
+                await _context.MessageDeletedForUsers.AddAsync(deletedForUser);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding MessageDeletedForUser. MessageId={MessageId}, UserId={UserId}", 
+                    deletedForUser.MessageId, deletedForUser.UserId);
                 throw;
             }
         }

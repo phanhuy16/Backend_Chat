@@ -55,6 +55,17 @@ namespace Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        // Get sent friend requests for a user
+        public async Task<IEnumerable<UserContact>> GetSentRequestsAsync(int userId)
+        {
+            return await _context.UserContacts
+                .Include(uc => uc.Sender)
+                .Include(uc => uc.Receiver)
+                .Where(uc => uc.SenderId == userId && uc.Status == StatusFriend.Pending)
+                .OrderByDescending(uc => uc.CreatedAt)
+                .ToListAsync();
+        }
+
         // Get all contacts (both sent and received) for a user
         public async Task<IEnumerable<UserContact>> GetUserContactsAsync(int userId)
         {

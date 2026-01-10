@@ -21,6 +21,7 @@ namespace Infrastructure.Data
         public DbSet<BlockedUser> BlockedUsers { get; set; } = null!;
         public DbSet<Report> Reports { get; set; } = null!;
         public DbSet<Call> Calls { get; set; } = null!;
+        public DbSet<MessageDeletedForUser> MessageDeletedForUsers { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -85,6 +86,17 @@ namespace Infrastructure.Data
                 entity.Property(e => e.FileType).HasMaxLength(50);
                 entity.HasOne(e => e.Message).WithMany(m => m.Attachments)
                     .HasForeignKey(e => e.MessageId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // MessageDeletedForUser Configuration
+            modelBuilder.Entity<MessageDeletedForUser>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Message).WithMany(m => m.DeletedForUsers)
+                    .HasForeignKey(e => e.MessageId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User).WithMany()
+                    .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(new[] { "MessageId", "UserId" }).IsUnique();
             });
 
             // UserContact Configuration

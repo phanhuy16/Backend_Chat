@@ -13,8 +13,11 @@ namespace Core.Interfaces.IServices
         // Reject friend request
         Task<bool> RejectFriendRequestAsync(int requestId, int userId);
 
-        // Get pending friend requests
+        // Get pending friend requests (received)
         Task<IEnumerable<FriendRequestDto>> GetPendingRequestsAsync(int userId);
+
+        // Get sent friend requests
+        Task<IEnumerable<FriendRequestDto>> GetSentRequestsAsync(int userId);
 
         // Get friends list
         Task<IEnumerable<FriendDto>> GetFriendsAsync(int userId);

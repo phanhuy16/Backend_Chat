@@ -1,6 +1,8 @@
-﻿using Core.Interfaces.IServices;
+﻿using API.Hubs;
+using Core.Interfaces.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
 namespace API.Controllers
@@ -10,11 +12,19 @@ namespace API.Controllers
     public class FriendsController : ControllerBase
     {
         private readonly IFriendService _friendService;
+        private readonly IUserService _userService;
+        private readonly IHubContext<ChatHub> _hubContext;
         private readonly ILogger<FriendsController> _logger;
 
-        public FriendsController(IFriendService friendService, ILogger<FriendsController> logger)
+        public FriendsController(
+            IFriendService friendService, 
+            IUserService userService,
+            IHubContext<ChatHub> hubContext,
+            ILogger<FriendsController> logger)
         {
             _friendService = friendService;
+            _userService = userService;
+            _hubContext = hubContext;
             _logger = logger;
         }
 
@@ -39,6 +49,30 @@ namespace API.Controllers
                     return BadRequest("Failed to send friend request");
 
                 _logger.LogInformation($"Friend request sent from {userId} to {targetUserId}");
+
+                // Send SignalR notification to receiver
+                try
+                {
+                    var sender = await _userService.GetUserByIdAsync(userId);
+                    if (sender != null)
+                    {
+                        await _hubContext.Clients.User(targetUserId.ToString())
+                            .SendAsync("FriendRequestReceived", new
+                            {
+                                SenderId = userId,
+                                SenderName = sender.DisplayName ?? sender.UserName,
+                                SenderAvatar = sender.Avatar ?? "",
+                                Timestamp = DateTime.UtcNow
+                            });
+                        _logger.LogInformation($"SignalR notification sent to user {targetUserId}");
+                    }
+                }
+                catch (Exception notifyEx)
+                {
+                    _logger.LogWarning(notifyEx, $"Failed to send SignalR notification to user {targetUserId}");
+                    // Don't fail the request if notification fails
+                }
+
                 return Ok(new { message = "Friend request sent successfully" });
             }
             catch (Exception ex)
@@ -121,6 +155,29 @@ namespace API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error fetching pending requests for user {userId}");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get sent friend requests
+        /// </summary>
+        [HttpGet("requests/sent")]
+        [Authorize]
+        public async Task<IActionResult> GetSentRequests()
+        {
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
+                return Unauthorized("User not found");
+
+            try
+            {
+                var requests = await _friendService.GetSentRequestsAsync(userId);
+                return Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching sent requests for user {userId}");
                 return StatusCode(500, new { message = ex.Message });
             }
         }

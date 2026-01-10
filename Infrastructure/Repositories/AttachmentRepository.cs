@@ -70,5 +70,28 @@ namespace Infrastructure.Repositories
                 throw;
             }
         }
+        /// <summary>
+        /// Get all attachments for a specific conversation
+        /// </summary>
+        public async Task<IEnumerable<Attachment>> GetConversationAttachmentsAsync(int conversationId)
+        {
+            try
+            {
+                _logger.LogInformation("Fetching attachments for conversation {ConversationId}", conversationId);
+ 
+                var attachments = await _context.Attachments
+                    .Include(a => a.Message)
+                    .Where(a => a.Message.ConversationId == conversationId)
+                    .OrderByDescending(a => a.UploadedAt)
+                    .ToListAsync();
+ 
+                return attachments;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching attachments for conversation {ConversationId}", conversationId);
+                throw;
+            }
+        }
     }
 }

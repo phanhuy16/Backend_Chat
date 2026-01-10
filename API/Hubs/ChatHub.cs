@@ -339,6 +339,26 @@ namespace API.Hubs
             }
         }
 
+        public async Task NotifyFriendRequest(int receiverId, int senderId, string senderName, string senderAvatar)
+        {
+            try
+            {
+                _logger.LogInformation($"Notifying user {receiverId} about friend request from {senderId}");
+
+                await Clients.User(receiverId.ToString()).SendAsync("FriendRequestReceived", new
+                {
+                    SenderId = senderId,
+                    SenderName = senderName,
+                    SenderAvatar = senderAvatar,
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"❌ Error notifying friend request: {ex.Message}");
+            }
+        }
+
         // Disconnect handler
         public override async Task OnDisconnectedAsync(Exception? exception)
         {

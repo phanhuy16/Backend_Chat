@@ -13,15 +13,18 @@ namespace API.Controllers
     {
         private readonly IConversationService _conversationService;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IAttachmentService _attachmentService;
         private readonly ILogger<ConversationsController> _logger;
 
         public ConversationsController(
             IConversationService conversationService,
             IHubContext<ChatHub> hubContext,
+            IAttachmentService attachmentService,
             ILogger<ConversationsController> logger)
         {
             _conversationService = conversationService;
             _hubContext = hubContext;
+            _attachmentService = attachmentService;
             _logger = logger;
         }
 
@@ -265,6 +268,24 @@ namespace API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get all attachments for a specific conversation
+        /// </summary>
+        [HttpGet("{id}/attachments")]
+        public async Task<IActionResult> GetAttachments(int id)
+        {
+            try
+            {
+                var attachments = await _attachmentService.GetAttachmentsByConversationIdAsync(id);
+                return Ok(attachments);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching attachments for conversation {ConversationId}", id);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -275,5 +296,4 @@ namespace API.Controllers
             return 0;
         }
     }
-
 }

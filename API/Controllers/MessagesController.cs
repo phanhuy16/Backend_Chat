@@ -78,7 +78,13 @@ namespace API.Controllers
                     return BadRequest("Page number and page size must be greater than 0");
                 }
 
-                var messages = await _messageService.GetConversationMessagesAsync(conversationId, pageNumber, pageSize);
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                {
+                    return Unauthorized();
+                }
+
+                var messages = await _messageService.GetConversationMessagesAsync(conversationId, userId, pageNumber, pageSize);
                 return Ok(messages);
             }
             catch (Exception ex)
@@ -153,6 +159,27 @@ namespace API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error removing reaction {ReactionId}", reactionId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpDelete("{id}/me")]
+        public async Task<IActionResult> DeleteMessageForMe(int id)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                {
+                    return Unauthorized();
+                }
+
+                await _messageService.DeleteMessageForMeAsync(id, userId);
+                return Ok("Message deleted for you");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting message {MessageId} for user", id);
                 return StatusCode(500, "Internal server error");
             }
         }

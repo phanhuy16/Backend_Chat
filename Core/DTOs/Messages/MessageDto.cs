@@ -17,5 +17,7 @@ namespace Core.DTOs.Messages
         public DateTime CreatedAt { get; set; }
         public ICollection<ReactionDto> Reactions { get; set; } = null!;
         public ICollection<AttachmentDto> Attachments { get; set; } = null!;
+        public bool IsDeleted { get; set; }
+        public bool IsDeletedForMe { get; set; }
     }
 }
