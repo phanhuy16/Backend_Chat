@@ -9,5 +9,7 @@ namespace Core.Interfaces.IRepositories
         Task AddDeletedForUserAsync(MessageDeletedForUser deletedForUser);
         Task AddReadStatusAsync(MessageReadStatus readStatus);
         Task<IEnumerable<MessageReadStatus>> GetMessageReadStatusesAsync(int messageId);
+        Task<IEnumerable<Message>> SearchMessagesAsync(int conversationId, string query);
+        Task<IEnumerable<Message>> GetPinnedMessagesAsync(int conversationId);
     }
 }

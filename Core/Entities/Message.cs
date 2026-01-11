@@ -13,6 +13,7 @@ namespace Core.Entities
         public DateTime UpdatedAt { get; set; }
         public bool IsDeleted { get; set; } = false;
         public bool IsPinned { get; set; } = false;
+        public bool IsModified { get; set; } = false;
         public int? ParentMessageId { get; set; }
         public int? ForwardedFromId { get; set; }
 

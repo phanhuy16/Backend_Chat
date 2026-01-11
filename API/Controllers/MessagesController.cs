@@ -183,5 +183,52 @@ namespace API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchMessages([FromQuery] int conversationId, [FromQuery] string query)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(query))
+                {
+                    return BadRequest("Query cannot be empty");
+                }
+
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                {
+                    return Unauthorized();
+                }
+
+                var messages = await _messageService.SearchMessagesAsync(conversationId, userId, query);
+                return Ok(messages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching messages. ConversationId={ConversationId}, Query={Query}", conversationId, query);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("conversation/{conversationId}/pinned")]
+        public async Task<IActionResult> GetPinnedMessages(int conversationId)
+        {
+            try
+            {
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                {
+                    return Unauthorized();
+                }
+
+                var messages = await _messageService.GetPinnedMessagesAsync(conversationId, userId);
+                return Ok(messages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching pinned messages for conversation {ConversationId}", conversationId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 }

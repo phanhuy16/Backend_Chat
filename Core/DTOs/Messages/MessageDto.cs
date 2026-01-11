@@ -20,6 +20,7 @@ namespace Core.DTOs.Messages
         public bool IsDeleted { get; set; }
         public bool IsDeletedForMe { get; set; }
         public bool IsPinned { get; set; }
+        public bool IsModified { get; set; }
         public int? ParentMessageId { get; set; }
         public MessageDto? ParentMessage { get; set; }
         public int? ForwardedFromId { get; set; }

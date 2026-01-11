@@ -18,5 +18,7 @@ namespace Core.Interfaces.IServices
         Task<bool> TogglePinMessageAsync(int messageId);
         Task MarkAsReadAsync(int messageId, int userId);
         Task<MessageDto> ForwardMessageAsync(int messageId, int targetConversationId, int senderId);
+        Task<IEnumerable<MessageDto>> SearchMessagesAsync(int conversationId, int userId, string query);
+        Task<IEnumerable<MessageDto>> GetPinnedMessagesAsync(int conversationId, int userId);
     }
 }

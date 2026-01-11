@@ -123,5 +123,39 @@ namespace Infrastructure.Repositories
                 .Where(s => s.MessageId == messageId)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<Message>> SearchMessagesAsync(int conversationId, string query)
+        {
+            try
+            {
+                _logger.LogInformation("Searching messages in ConversationId={ConversationId} with Query={Query}", conversationId, query);
+
+                return await _context.Messages
+                    .Where(m => m.ConversationId == conversationId && 
+                               !m.IsDeleted && 
+                               m.Content != null && 
+                               m.Content.ToLower().Contains(query.ToLower()))
+                    .Include(m => m.Sender)
+                    .Include(m => m.Reactions)
+                    .Include(m => m.Attachments)
+                    .Include(m => m.DeletedForUsers)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching messages. ConversationId={ConversationId}, Query={Query}", conversationId, query);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<Message>> GetPinnedMessagesAsync(int conversationId)
+        {
+            return await _context.Messages
+                .Where(m => m.ConversationId == conversationId && m.IsPinned && !m.IsDeleted)
+                .Include(m => m.Sender)
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

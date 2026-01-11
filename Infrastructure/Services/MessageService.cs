@@ -148,6 +148,7 @@ namespace Infrastructure.Services
                 if (message != null)
                 {
                     message.Content = newContent;
+                    message.IsModified = true;
                     message.UpdatedAt = DateTime.UtcNow;
                     await _messageRepository.UpdateAsync(message);
                     return MapToMessageDto(message);
@@ -350,6 +351,34 @@ namespace Infrastructure.Services
             }
         }
 
+        public async Task<IEnumerable<MessageDto>> SearchMessagesAsync(int conversationId, int userId, string query)
+        {
+            try
+            {
+                var messages = await _messageRepository.SearchMessagesAsync(conversationId, query);
+                return messages.Select(m => MapToMessageDto(m, userId)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching messages in service. ConversationId={ConversationId}, Query={Query}", conversationId, query);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<MessageDto>> GetPinnedMessagesAsync(int conversationId, int userId)
+        {
+            try
+            {
+                var messages = await _messageRepository.GetPinnedMessagesAsync(conversationId);
+                return messages.Select(m => MapToMessageDto(m, userId)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching pinned messages in service. ConversationId={ConversationId}", conversationId);
+                throw;
+            }
+        }
+
         private MessageDto MapToMessageDto(Message message, int currentUserId = 0)
         {
             return new MessageDto
@@ -384,6 +413,7 @@ namespace Infrastructure.Services
                 IsDeleted = message.IsDeleted,
                 IsDeletedForMe = currentUserId != 0 && message.DeletedForUsers.Any(dfu => dfu.UserId == currentUserId),
                 IsPinned = message.IsPinned,
+                IsModified = message.IsModified,
                 ParentMessageId = message.ParentMessageId,
                 ParentMessage = message.ParentMessage != null ? MapToMessageDto(message.ParentMessage, currentUserId) : null,
                 ForwardedFromId = message.ForwardedFromId,
