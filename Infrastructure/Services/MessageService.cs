@@ -223,7 +223,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType)
+        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null)
         {
             try
             {
@@ -237,6 +237,7 @@ namespace Infrastructure.Services
                     MessageType = messageType,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
+                    ParentMessageId = parentMessageId
                 };
 
                 await _messageRepository.AddAsync(message);
@@ -256,6 +257,95 @@ namespace Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending message for conversation {ConversationId} by user {SenderId}", conversationId, senderId);
+                throw;
+            }
+        }
+
+        public async Task<bool> TogglePinMessageAsync(int messageId)
+        {
+            try
+            {
+                var message = await _messageRepository.GetByIdAsync(messageId);
+                if (message == null) return false;
+
+                message.IsPinned = !message.IsPinned;
+                message.UpdatedAt = DateTime.UtcNow;
+                await _messageRepository.UpdateAsync(message);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling pin for message {MessageId}", messageId);
+                throw;
+            }
+        }
+
+        public async Task MarkAsReadAsync(int messageId, int userId)
+        {
+            try
+            {
+                var readStatus = new MessageReadStatus
+                {
+                    MessageId = messageId,
+                    UserId = userId,
+                    ReadAt = DateTime.UtcNow
+                };
+                await _messageRepository.AddReadStatusAsync(readStatus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking message {MessageId} as read by user {UserId}", messageId, userId);
+                throw;
+            }
+        }
+
+        public async Task<MessageDto> ForwardMessageAsync(int messageId, int targetConversationId, int senderId)
+        {
+            try
+            {
+                var originalMessage = await _messageRepository.GetMessageWithReactionsAsync(messageId);
+                if (originalMessage == null) throw new Exception("Original message not found");
+
+                var newMessage = new Message
+                {
+                    ConversationId = targetConversationId,
+                    SenderId = senderId,
+                    Content = originalMessage.Content,
+                    MessageType = originalMessage.MessageType,
+                    ForwardedFromId = messageId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                // Copy attachments if any
+                if (originalMessage.Attachments != null && originalMessage.Attachments.Any())
+                {
+                    foreach (var att in originalMessage.Attachments)
+                    {
+                        newMessage.Attachments.Add(new Attachment
+                        {
+                            FileName = att.FileName,
+                            FileUrl = att.FileUrl,
+                            FileSize = att.FileSize,
+                            FileType = att.FileType,
+                            UploadedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                await _messageRepository.AddAsync(newMessage);
+                var savedMessage = await _messageRepository.GetByIdAsync(newMessage.Id);
+                
+                if (savedMessage.Sender == null)
+                {
+                    savedMessage.Sender = await _userRepository.GetByIdAsync(senderId);
+                }
+
+                return MapToMessageDto(savedMessage, senderId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error forwarding message {MessageId} to conversation {TargetConversationId}", messageId, targetConversationId);
                 throw;
             }
         }
@@ -292,7 +382,13 @@ namespace Infrastructure.Services
                     FileUrl = a.FileUrl
                 }).ToList(),
                 IsDeleted = message.IsDeleted,
-                IsDeletedForMe = currentUserId != 0 && message.DeletedForUsers.Any(dfu => dfu.UserId == currentUserId)
+                IsDeletedForMe = currentUserId != 0 && message.DeletedForUsers.Any(dfu => dfu.UserId == currentUserId),
+                IsPinned = message.IsPinned,
+                ParentMessageId = message.ParentMessageId,
+                ParentMessage = message.ParentMessage != null ? MapToMessageDto(message.ParentMessage, currentUserId) : null,
+                ForwardedFromId = message.ForwardedFromId,
+                IsReadByMe = currentUserId != 0 && _messageRepository.GetMessageReadStatusesAsync(message.Id).Result.Any(s => s.UserId == currentUserId),
+                ReadCount = _messageRepository.GetMessageReadStatusesAsync(message.Id).Result.Count()
             };
         }
 

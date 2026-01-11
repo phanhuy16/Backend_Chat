@@ -12,6 +12,9 @@ namespace Core.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public bool IsDeleted { get; set; } = false;
+        public bool IsPinned { get; set; } = false;
+        public int? ParentMessageId { get; set; }
+        public int? ForwardedFromId { get; set; }
 
         // Foreign keys
         public Conversations Conversation { get; set; } = null!;
@@ -21,5 +24,7 @@ namespace Core.Entities
         public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();
         public ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
         public ICollection<MessageDeletedForUser> DeletedForUsers { get; set; } = new List<MessageDeletedForUser>();
+        public Message? ParentMessage { get; set; }
+        public ICollection<Message> Replies { get; set; } = new List<Message>();
     }
 }

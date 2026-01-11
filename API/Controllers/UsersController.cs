@@ -255,6 +255,33 @@ namespace API.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+        /// <summary>
+        /// Update user custom status message
+        /// </summary>
+        [HttpPut("custom-status")]
+        [Authorize]
+        public async Task<IActionResult> UpdateCustomStatus([FromBody] UpdateCustomStatusRequest request)
+        {
+            var userId = GetCurrentUserId();
+            if (userId <= 0)
+                return Unauthorized("User not found");
+
+            try
+            {
+                var result = await _userService.UpdateCustomStatusAsync(userId, request.CustomStatus);
+                if (!result)
+                    return NotFound("User not found");
+
+                _logger.LogInformation($"User {userId} custom status updated");
+                return Ok(new { message = "Custom status updated successfully", customStatus = request.CustomStatus });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating custom status: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

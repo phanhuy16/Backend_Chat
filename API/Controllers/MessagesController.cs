@@ -52,7 +52,7 @@ namespace API.Controllers
                 }
 
                 var message = await _messageService.SendMessageAsync(
-                    request.ConversationId, request.SenderId, request.Content, request.MessageType);
+                    request.ConversationId, request.SenderId, request.Content, request.MessageType, request.ParentMessageId);
 
                 _logger.LogInformation("Message {MessageId} sent in conversation {ConversationId} by user {SenderId}",
                     message.Id, request.ConversationId, request.SenderId);

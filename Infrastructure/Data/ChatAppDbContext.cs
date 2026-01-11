@@ -22,6 +22,7 @@ namespace Infrastructure.Data
         public DbSet<Report> Reports { get; set; } = null!;
         public DbSet<Call> Calls { get; set; } = null!;
         public DbSet<MessageDeletedForUser> MessageDeletedForUsers { get; set; } = null!;
+        public DbSet<MessageReadStatus> MessageReadStatuses { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -63,6 +64,12 @@ namespace Infrastructure.Data
                     .HasForeignKey(e => e.SenderId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(e => e.ConversationId);
                 entity.HasIndex(e => e.CreatedAt);
+
+                // Reply Configuration
+                entity.HasOne(e => e.ParentMessage)
+                    .WithMany(m => m.Replies)
+                    .HasForeignKey(e => e.ParentMessageId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             // MessageReaction Configuration
@@ -173,6 +180,20 @@ namespace Infrastructure.Data
                 .WithMany()
                 .HasForeignKey(c => c.ConversationId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            // MessageReadStatus Configuration
+            modelBuilder.Entity<MessageReadStatus>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Message)
+                    .WithMany()
+                    .HasForeignKey(e => e.MessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 

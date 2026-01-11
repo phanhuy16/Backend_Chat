@@ -12,5 +12,7 @@ namespace Core.DTOs.ChatHub
         public string? Content { get; set; }
         public MessageType MessageType { get; set; }
         public DateTime CreatedAt { get; set; }
+        public int? ParentMessageId { get; set; }
+        public ChatMessage? ParentMessage { get; set; }
     }
 }

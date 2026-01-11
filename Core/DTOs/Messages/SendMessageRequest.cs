@@ -8,5 +8,6 @@ namespace Core.DTOs.Messages
         public int SenderId { get; set; }
         public string? Content { get; set; }
         public MessageType MessageType { get; set; }
+        public int? ParentMessageId { get; set; }
     }
 }

@@ -16,8 +16,14 @@ namespace Core.DTOs.Messages
         public MessageType MessageType { get; set; }
         public DateTime CreatedAt { get; set; }
         public ICollection<ReactionDto> Reactions { get; set; } = null!;
-        public ICollection<AttachmentDto> Attachments { get; set; } = null!;
+        public List<AttachmentDto> Attachments { get; set; } = new List<AttachmentDto>();
         public bool IsDeleted { get; set; }
         public bool IsDeletedForMe { get; set; }
+        public bool IsPinned { get; set; }
+        public int? ParentMessageId { get; set; }
+        public MessageDto? ParentMessage { get; set; }
+        public int? ForwardedFromId { get; set; }
+        public bool IsReadByMe { get; set; }
+        public int ReadCount { get; set; }
     }
 }

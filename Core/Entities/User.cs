@@ -12,6 +12,8 @@ namespace Core.Entities
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public string RefreshToken { get; set; } = string.Empty;
         public DateTime RefreshTokenExpiryTime { get; set; }
+        public string? Bio { get; set; }
+        public string? CustomStatus { get; set; }
 
         // Navigation properties
         public ICollection<Conversations> CreatedConversations { get; set; } = new List<Conversations>();

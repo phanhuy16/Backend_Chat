@@ -77,7 +77,7 @@ namespace API.Hubs
         }
 
         // Send message to conversation
-        public async Task SendMessage(int conversationId, int senderId, string? content, MessageType messageType = 0)
+        public async Task SendMessage(int conversationId, int senderId, string? content, MessageType messageType = 0, int? parentMessageId = null)
         {
             try
             {
@@ -114,7 +114,7 @@ namespace API.Hubs
 
                 // For group conversations, no block check needed (can implement group-specific rules if needed)
 
-                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType);
+                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType, parentMessageId);
 
                 var sender = await _userService.GetUserByIdAsync(senderId);
 
@@ -128,6 +128,13 @@ namespace API.Hubs
                     Content = messageDto.Content,
                     MessageType = messageDto.MessageType,
                     CreatedAt = messageDto.CreatedAt,
+                    ParentMessageId = messageDto.ParentMessageId,
+                    ParentMessage = messageDto.ParentMessage != null ? new ChatMessage
+                    {
+                        MessageId = messageDto.ParentMessage.Id,
+                        Content = messageDto.ParentMessage.Content,
+                        SenderName = messageDto.ParentMessage.Sender.DisplayName
+                    } : null
                 };
 
                 string groupName = $"conversation_{conversationId}";
@@ -289,6 +296,7 @@ namespace API.Hubs
         {
             try
             {
+                await _messageService.MarkAsReadAsync(messageId, userId);
                 string groupName = $"conversation_{conversationId}";
 
                 await Clients.Group(groupName).SendAsync("MessageRead", new
@@ -302,6 +310,21 @@ namespace API.Hubs
             {
                 _logger.LogError($"Error marking message as read: {ex.Message}");
                 await Clients.Caller.SendAsync("Error", $"Error marking message as read: {ex.Message}");
+            }
+        }
+
+        public async Task ForwardMessage(int messageId, int targetConversationId, int senderId)
+        {
+            try
+            {
+                var chatMessage = await _messageService.ForwardMessageAsync(messageId, targetConversationId, senderId);
+                string groupName = $"conversation_{targetConversationId}";
+                await Clients.Group(groupName).SendAsync("ReceiveMessage", chatMessage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error forwarding message: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", $"Error forwarding message: {ex.Message}");
             }
         }
 
@@ -356,6 +379,25 @@ namespace API.Hubs
             catch (Exception ex)
             {
                 _logger.LogError($"❌ Error notifying friend request: {ex.Message}");
+            }
+        }
+
+        // Pin message
+        public async Task PinMessage(int messageId, int conversationId)
+        {
+            try
+            {
+                var result = await _messageService.TogglePinMessageAsync(messageId);
+                if (result)
+                {
+                    string groupName = $"conversation_{conversationId}";
+                    await Clients.Group(groupName).SendAsync("MessagePinnedStatusChanged", messageId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error pinning message: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", $"Error pinning message: {ex.Message}");
             }
         }
 

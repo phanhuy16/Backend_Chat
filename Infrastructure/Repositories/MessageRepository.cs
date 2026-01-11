@@ -29,7 +29,9 @@ namespace Infrastructure.Repositories
                     .Include(m => m.Sender)
                     .Include(m => m.Reactions)
                     .Include(m => m.Attachments)
-                    .Include(m => m.DeletedForUsers) // Need to include this to check in service
+                    .Include(m => m.DeletedForUsers)
+                    .Include(m => m.ParentMessage)
+                        .ThenInclude(p => p != null ? p.Sender : null)
                     .OrderByDescending(m => m.CreatedAt)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
@@ -61,6 +63,8 @@ namespace Infrastructure.Repositories
                     .Include(m => m.Reactions)
                     .Include(m => m.Attachments)
                     .Include(m => m.Sender)
+                    .Include(m => m.ParentMessage)
+                        .ThenInclude(p => p != null ? p.Sender : null)
                     .FirstOrDefaultAsync(m => m.Id == messageId);
 
                 if (message == null)
@@ -90,6 +94,34 @@ namespace Infrastructure.Repositories
                     deletedForUser.MessageId, deletedForUser.UserId);
                 throw;
             }
+        }
+
+        public async Task AddReadStatusAsync(MessageReadStatus readStatus)
+        {
+            try
+            {
+                var existing = await _context.MessageReadStatuses
+                    .FirstOrDefaultAsync(s => s.MessageId == readStatus.MessageId && s.UserId == readStatus.UserId);
+                
+                if (existing == null)
+                {
+                    await _context.MessageReadStatuses.AddAsync(readStatus);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding MessageReadStatus. MessageId={MessageId}, UserId={UserId}", 
+                    readStatus.MessageId, readStatus.UserId);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<MessageReadStatus>> GetMessageReadStatusesAsync(int messageId)
+        {
+            return await _context.MessageReadStatuses
+                .Where(s => s.MessageId == messageId)
+                .ToListAsync();
         }
     }
 }

@@ -163,7 +163,7 @@ namespace Infrastructure.Services
                     return null!;
 
                 user.DisplayName = request.DisplayName;
-                // user.Bio = request.Bio;
+                user.Bio = request.Bio;
                 user.UpdatedAt = DateTime.UtcNow;
 
                 await _userRepository.UpdateAsync(user);
@@ -235,6 +235,17 @@ namespace Infrastructure.Services
             }
         }
 
+        public async Task<bool> UpdateCustomStatusAsync(int userId, string? customStatus)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) return false;
+
+            user.CustomStatus = customStatus;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
+
         private UserDto MapToUserDto(User user)
         {
             return new UserDto
@@ -244,8 +255,9 @@ namespace Infrastructure.Services
                 Email = user.Email!,
                 DisplayName = user.DisplayName,
                 Avatar = user.Avatar,
-                //Bio = user.Bio,
+                Bio = user.Bio,
                 Status = user.Status,
+                CustomStatus = user.CustomStatus,
                 LastActiveAt = user.UpdatedAt
             };
         }

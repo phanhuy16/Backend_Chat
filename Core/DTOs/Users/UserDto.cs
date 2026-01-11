@@ -10,6 +10,7 @@ namespace Core.DTOs.Users
         public string DisplayName { get; set; } = string.Empty;
         public string Avatar { get; set; } = string.Empty;
         public string? Bio { get; set; }
+        public string? CustomStatus { get; set; }
         public StatusUser Status { get; set; } = StatusUser.Offline;
         public DateTime LastActiveAt { get; set; }
     }
