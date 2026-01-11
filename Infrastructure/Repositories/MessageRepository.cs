@@ -121,6 +121,7 @@ namespace Infrastructure.Repositories
         {
             return await _context.MessageReadStatuses
                 .Where(s => s.MessageId == messageId)
+                .Include(s => s.User)
                 .ToListAsync();
         }
 

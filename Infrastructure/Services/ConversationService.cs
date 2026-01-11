@@ -13,15 +13,18 @@ namespace Infrastructure.Services
     {
         private readonly IConversationRepository _conversationRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IRepository<ConversationMembers> _memberRepository;
         private readonly ILogger<ConversationService> _logger;
 
         public ConversationService(
             IConversationRepository conversationRepository,
             IUserRepository userRepository,
+            IRepository<ConversationMembers> memberRepository,
             ILogger<ConversationService> logger)
         {
             _conversationRepository = conversationRepository;
             _userRepository = userRepository;
+            _memberRepository = memberRepository;
             _logger = logger;
         }
 
@@ -71,7 +74,7 @@ namespace Infrastructure.Services
                 if (existing != null)
                 {
                     _logger.LogInformation($"Conversation already exists between users {userId1} and {userId2}");
-                    return MapToConversationDto(existing);
+                    return MapToConversationDto(existing, userId1);
                 }
 
                 _logger.LogInformation($"Creating direct conversation between users {userId1} and {userId2}");
@@ -122,7 +125,7 @@ namespace Infrastructure.Services
 
                 _logger.LogInformation($"Conversation {savedConversation.Id} fully created with {savedConversation.Members.Count} members");
 
-                return MapToConversationDto(savedConversation);
+                return MapToConversationDto(savedConversation, userId1);
             }
             catch (Exception ex)
             {
@@ -186,7 +189,7 @@ namespace Infrastructure.Services
                     throw new Exception("Failed to retrieve saved group conversation");
                 }
 
-                return MapToConversationDto(savedConversation);
+                return MapToConversationDto(savedConversation, createdBy);
             }
             catch (Exception ex)
             {
@@ -231,7 +234,7 @@ namespace Infrastructure.Services
             try
             {
                 var conversation = await _conversationRepository.GetConversationWithMembersAsync(conversationId);
-                return conversation != null ? MapToConversationDto(conversation) : null!;
+                return conversation != null ? MapToConversationDto(conversation, null) : null!;
             }
             catch (Exception ex)
             {
@@ -245,7 +248,7 @@ namespace Infrastructure.Services
             try
             {
                 var conversations = await _conversationRepository.GetUserConversationsAsync(userId);
-                return conversations.Select(c => MapToConversationDto(c)).ToList();
+                return conversations.Select(c => MapToConversationDto(c, userId)).ToList();
             }
             catch (Exception ex)
             {
@@ -287,6 +290,27 @@ namespace Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Error leaving conversation: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<bool> TogglePinConversationAsync(int conversationId, int userId)
+        {
+            try
+            {
+                var member = await _conversationRepository.GetConversationMemberAsync(conversationId, userId);
+                if (member == null)
+                    throw new Exception("Member not found in conversation");
+
+                member.IsPinned = !member.IsPinned;
+                await _memberRepository.UpdateAsync(member);
+                
+                _logger.LogInformation($"Conversation {conversationId} pin status toggled to {member.IsPinned} for user {userId}");
+                return member.IsPinned;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error toggling pin status: {ex.Message}");
                 throw;
             }
         }
@@ -354,9 +378,9 @@ namespace Infrastructure.Services
             }
         }
 
-        private ConversationDto MapToConversationDto(Conversations conversation)
+        private ConversationDto MapToConversationDto(Conversations conversation, int? currentUserId = null)
         {
-            return new ConversationDto
+            var dto = new ConversationDto
             {
                 Id = conversation.Id,
                 ConversationType = conversation.ConversationType,
@@ -396,6 +420,17 @@ namespace Infrastructure.Services
                 CreatedBy = conversation.CreatedBy,
                 CreatedAt = conversation.CreatedAt,
             };
+
+            if (currentUserId.HasValue)
+            {
+                var currentMember = conversation.Members.FirstOrDefault(m => m.UserId == currentUserId.Value);
+                if (currentMember != null)
+                {
+                    dto.IsPinned = currentMember.IsPinned;
+                }
+            }
+
+            return dto;
         }
     }
 }

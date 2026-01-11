@@ -379,6 +379,26 @@ namespace Infrastructure.Services
             }
         }
 
+        public async Task<IEnumerable<MessageReaderDto>> GetMessageReadersAsync(int messageId)
+        {
+            try
+            {
+                var readStatuses = await _messageRepository.GetMessageReadStatusesAsync(messageId);
+                return readStatuses.Select(s => new MessageReaderDto
+                {
+                    UserId = s.UserId,
+                    DisplayName = s.User?.DisplayName ?? s.User?.UserName ?? "Unknown",
+                    Avatar = s.User?.Avatar ?? "",
+                    ReadAt = s.ReadAt
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting message readers for message {MessageId}", messageId);
+                throw;
+            }
+        }
+
         private MessageDto MapToMessageDto(Message message, int currentUserId = 0)
         {
             return new MessageDto

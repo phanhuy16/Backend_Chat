@@ -164,6 +164,11 @@ namespace Infrastructure.Services
 
                 user.DisplayName = request.DisplayName;
                 user.Bio = request.Bio;
+
+                if (request.LastSeenPrivacy != null) user.LastSeenPrivacy = request.LastSeenPrivacy;
+                if (request.OnlineStatusPrivacy != null) user.OnlineStatusPrivacy = request.OnlineStatusPrivacy;
+                if (request.ReadReceiptsEnabled.HasValue) user.ReadReceiptsEnabled = request.ReadReceiptsEnabled.Value;
+
                 user.UpdatedAt = DateTime.UtcNow;
 
                 await _userRepository.UpdateAsync(user);
@@ -258,7 +263,10 @@ namespace Infrastructure.Services
                 Bio = user.Bio,
                 Status = user.Status,
                 CustomStatus = user.CustomStatus,
-                LastActiveAt = user.UpdatedAt
+                LastActiveAt = user.UpdatedAt,
+                LastSeenPrivacy = user.LastSeenPrivacy,
+                OnlineStatusPrivacy = user.OnlineStatusPrivacy,
+                ReadReceiptsEnabled = user.ReadReceiptsEnabled
             };
         }
     }

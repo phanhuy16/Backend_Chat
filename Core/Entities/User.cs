@@ -14,6 +14,9 @@ namespace Core.Entities
         public DateTime RefreshTokenExpiryTime { get; set; }
         public string? Bio { get; set; }
         public string? CustomStatus { get; set; }
+        public string LastSeenPrivacy { get; set; } = "everyone";
+        public string OnlineStatusPrivacy { get; set; } = "everyone";
+        public bool ReadReceiptsEnabled { get; set; } = true;
 
         // Navigation properties
         public ICollection<Conversations> CreatedConversations { get; set; } = new List<Conversations>();

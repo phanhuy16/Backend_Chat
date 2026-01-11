@@ -147,5 +147,11 @@ namespace Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<ConversationMembers> GetConversationMemberAsync(int conversationId, int userId)
+        {
+            return await _context.ConversationMembers
+                .FirstOrDefaultAsync(m => m.ConversationId == conversationId && m.UserId == userId) ?? null!;
+        }
     }
 }

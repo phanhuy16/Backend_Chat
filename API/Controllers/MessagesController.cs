@@ -230,5 +230,20 @@ namespace API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        [HttpGet("{id}/readers")]
+        public async Task<IActionResult> GetMessageReaders(int id)
+        {
+            try
+            {
+                var readers = await _messageService.GetMessageReadersAsync(id);
+                return Ok(readers);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching readers for message {MessageId}", id);
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 }

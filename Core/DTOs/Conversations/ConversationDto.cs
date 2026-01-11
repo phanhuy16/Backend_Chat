@@ -14,5 +14,6 @@ namespace Core.DTOs.Conversations
         public List<MessageDto> Messages { get; set; } = new List<MessageDto>();
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsPinned { get; set; }
     }
 }

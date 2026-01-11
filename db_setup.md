@@ -38,3 +38,8 @@ dotnet ef migrations remove --project Infrastructure --startup-project API
 ## 4. Lưu ý
 - Dự án sử dụng `Infrastructure` làm nơi lưu trữ dữ liệu và migration (`--project Infrastructure`).
 - Dự án sử dụng `API` làm điểm khởi đầu để đọc cấu hình chuỗi kết nối (`--startup-project API`).
+
+### D. Chạy dự án
+```bash
+dotnet watch run --project API
+```

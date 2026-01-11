@@ -286,6 +286,29 @@ namespace API.Controllers
             }
         }
 
+        [HttpPost("{conversationId}/pin/{userId}")]
+        public async Task<IActionResult> TogglePin(int conversationId, int userId)
+        {
+            try
+            {
+                var isPinned = await _conversationService.TogglePinConversationAsync(conversationId, userId);
+                
+                // Optional: Notify user via SignalR if they are connected on multiple devices
+                await _hubContext.Clients.User(userId.ToString())
+                    .SendAsync("ConversationPinStatusChanged", new { ConversationId = conversationId, IsPinned = isPinned });
+
+                _logger.LogInformation("Conversation {ConversationId} pin status toggled to {IsPinned} for user {UserId}",
+                    conversationId, isPinned, userId);
+
+                return Ok(new { isPinned });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling pin status for conversation {ConversationId}", conversationId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

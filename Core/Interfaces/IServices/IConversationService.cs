@@ -15,5 +15,6 @@ namespace Core.Interfaces.IServices
         Task TransferAdminRightsAsync(int conversationId, int fromUserId, int toUserId);
         Task DeleteGroupConversationAsync(int conversationId, int requestingUserId);
         Task LeaveConversationAsync(int conversationId, int userId);
+        Task<bool> TogglePinConversationAsync(int conversationId, int userId);
     }
 }

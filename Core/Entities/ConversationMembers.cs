@@ -9,6 +9,7 @@ namespace Core.Entities
         public int UserId { get; set; }
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
         public string Role { get; set; } = string.Empty;
+        public bool IsPinned { get; set; } = false;
 
         // Foreign keys
         public Conversations Conversation { get; set; } = null!;

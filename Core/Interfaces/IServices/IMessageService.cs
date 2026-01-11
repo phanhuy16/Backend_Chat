@@ -20,5 +20,6 @@ namespace Core.Interfaces.IServices
         Task<MessageDto> ForwardMessageAsync(int messageId, int targetConversationId, int senderId);
         Task<IEnumerable<MessageDto>> SearchMessagesAsync(int conversationId, int userId, string query);
         Task<IEnumerable<MessageDto>> GetPinnedMessagesAsync(int conversationId, int userId);
+        Task<IEnumerable<MessageReaderDto>> GetMessageReadersAsync(int messageId);
     }
 }
