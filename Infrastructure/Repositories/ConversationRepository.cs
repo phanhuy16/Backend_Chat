@@ -153,5 +153,17 @@ namespace Infrastructure.Repositories
             return await _context.ConversationMembers
                 .FirstOrDefaultAsync(m => m.ConversationId == conversationId && m.UserId == userId) ?? null!;
         }
+
+        public async Task<IEnumerable<Message>> GetMessagesWithContentAsync(int conversationId, string contentPart)
+        {
+            return await _context.Messages
+                .Where(m => m.ConversationId == conversationId && 
+                            !m.IsDeleted && 
+                            m.Content != null && 
+                            m.Content.ToLower().Contains(contentPart.ToLower()))
+                .Include(m => m.Sender)
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

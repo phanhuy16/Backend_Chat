@@ -309,6 +309,21 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet("{id}/links")]
+        public async Task<IActionResult> GetConversationLinks(int id)
+        {
+            try
+            {
+                var links = await _conversationService.GetConversationLinksAsync(id);
+                return Ok(links);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching links for conversation {ConversationId}", id);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

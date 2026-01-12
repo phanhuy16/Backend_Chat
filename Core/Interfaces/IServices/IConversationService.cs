@@ -16,5 +16,6 @@ namespace Core.Interfaces.IServices
         Task DeleteGroupConversationAsync(int conversationId, int requestingUserId);
         Task LeaveConversationAsync(int conversationId, int userId);
         Task<bool> TogglePinConversationAsync(int conversationId, int userId);
+        Task<IEnumerable<LinkDto>> GetConversationLinksAsync(int conversationId);
     }
 }

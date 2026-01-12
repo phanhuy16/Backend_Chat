@@ -16,5 +16,6 @@ namespace Core.Interfaces.IRepositories
             int pageNumber = 1,
             int pageSize = 50);
         Task<ConversationMembers> GetConversationMemberAsync(int conversationId, int userId);
+        Task<IEnumerable<Message>> GetMessagesWithContentAsync(int conversationId, string contentPart);
     }
 }

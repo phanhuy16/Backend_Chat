@@ -7,6 +7,11 @@ using Core.Interfaces.IRepositories;
 using Core.Interfaces.IServices;
 using Microsoft.Extensions.Logging;
 
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
+
 namespace Infrastructure.Services
 {
     public class ConversationService : IConversationService
@@ -342,7 +347,7 @@ namespace Infrastructure.Services
         /// <summary>
         /// Transfer admin rights to another member
         /// </summary>
-        public async Task TransferAdminRightsAsync(int conversationId, int fromUserId, int toUserId)
+    public async Task TransferAdminRightsAsync(int conversationId, int fromUserId, int toUserId)
         {
             try
             {
@@ -374,6 +379,47 @@ namespace Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Error transferring admin rights: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<LinkDto>> GetConversationLinksAsync(int conversationId)
+        {
+            try
+            {
+                // 1. Get messages containing "http"
+                var messages = await _conversationRepository.GetMessagesWithContentAsync(conversationId, "http");
+
+                var links = new List<LinkDto>();
+                // Regex pattern for URL extraction (basic version)
+                var urlPattern = @"(http|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?";
+
+                foreach (var msg in messages)
+                {
+                    if (string.IsNullOrEmpty(msg.Content)) continue;
+
+                    var matches = Regex.Matches(msg.Content, urlPattern);
+                    foreach (Match match in matches)
+                    {
+                        // Exclude Giphy links
+                        if (match.Value.Contains("giphy.com", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        links.Add(new LinkDto
+                        {
+                            MessageId = msg.Id,
+                            Url = match.Value,
+                            SenderName = msg.Sender?.DisplayName ?? "Unknown",
+                            SentAt = msg.CreatedAt
+                        });
+                    }
+                }
+
+                return links.OrderByDescending(l => l.SentAt);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting conversation links: {ex.Message}");
                 throw;
             }
         }
