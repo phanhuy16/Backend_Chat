@@ -2,6 +2,7 @@ using Moq;
 using Core.Entities;
 using Core.Enums;
 using Core.Interfaces.IRepositories;
+using Core.Interfaces.IServices;
 using Infrastructure.Services;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -14,6 +15,8 @@ namespace ChatApp_Backend.Tests.Services
         private readonly Mock<IReactionRepository> _reactionRepoMock;
         private readonly Mock<IUserRepository> _userRepoMock;
         private readonly Mock<ILogger<MessageService>> _loggerMock;
+        private readonly Mock<IPushNotificationService> _pushServiceMock;
+        private readonly Mock<IConversationRepository> _conversationRepoMock;
         private readonly MessageService _messageService;
 
         public MessageServiceTests()
@@ -22,11 +25,15 @@ namespace ChatApp_Backend.Tests.Services
             _reactionRepoMock = new Mock<IReactionRepository>();
             _userRepoMock = new Mock<IUserRepository>();
             _loggerMock = new Mock<ILogger<MessageService>>();
+            _pushServiceMock = new Mock<IPushNotificationService>();
+            _conversationRepoMock = new Mock<IConversationRepository>();
             _messageService = new MessageService(
                 _messageRepoMock.Object,
                 _reactionRepoMock.Object,
                 _userRepoMock.Object,
-                _loggerMock.Object
+                _loggerMock.Object,
+                _pushServiceMock.Object,
+                _conversationRepoMock.Object
             );
         }
 

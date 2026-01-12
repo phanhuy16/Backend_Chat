@@ -15,16 +15,22 @@ namespace Infrastructure.Services
         private readonly IReactionRepository _reactionRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<MessageService> _logger;
+        private readonly IPushNotificationService _pushService;
+        private readonly IConversationRepository _conversationRepository;
 
         public MessageService(IMessageRepository messageRepository,
                             IReactionRepository reactionRepository,
                             IUserRepository userRepository,
-                            ILogger<MessageService> logger)
+                            ILogger<MessageService> logger,
+                            IPushNotificationService pushService,
+                            IConversationRepository conversationRepository)
         {
             _messageRepository = messageRepository;
             _reactionRepository = reactionRepository;
             _userRepository = userRepository;
             _logger = logger;
+            _pushService = pushService;
+            _conversationRepository = conversationRepository;
         }
 
         public async Task<ReactionDto> AddReactionAsync(int messageId, int userId, string emoji)
@@ -251,6 +257,42 @@ namespace Infrastructure.Services
                 if (savedMessage.Sender == null)
                 {
                     savedMessage.Sender = sender;
+                }
+
+                // Send Push Notification
+                try
+                {
+                    var conversation = await _conversationRepository.GetConversationWithMembersAsync(conversationId);
+                    if (conversation != null)
+                    {
+                        var title = conversation.GroupName; 
+                        if (string.IsNullOrEmpty(title)) 
+                        {
+                            title = sender!.DisplayName; 
+                        }
+                        
+                        // We need members. If GetByIdAsync doesn't include members, we might need another method.
+                        // Assuming GetByIdAsync includes members or we lazy load? Default GetById usually simple.
+                        // Let's explicitly get members if possible or assume conversation.Members is populated.
+                        // For safety, let's use conversationRepository.GetByIdWithMembersAsync if it exists, or just try Members.
+                        // If repository pattern uses Include, it might be there.
+                        // Let's try to access conversation.Members.
+                        
+                       if (conversation.Members != null)
+                       {
+                           foreach (var member in conversation.Members)
+                           {
+                               if (member.UserId != senderId)
+                               {
+                                   await _pushService.SendNotificationAsync(member.UserId, sender!.DisplayName, content ?? "Sent a file", $"/chat/{conversationId}");
+                               }
+                           }
+                       }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error sending push notification");
                 }
 
                 return MapToMessageDto(savedMessage);

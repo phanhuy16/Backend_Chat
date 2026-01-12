@@ -23,6 +23,7 @@ namespace Infrastructure.Data
         public DbSet<Call> Calls { get; set; } = null!;
         public DbSet<MessageDeletedForUser> MessageDeletedForUsers { get; set; } = null!;
         public DbSet<MessageReadStatus> MessageReadStatuses { get; set; } = null!;
+        public DbSet<PushSubscription> PushSubscriptions { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
