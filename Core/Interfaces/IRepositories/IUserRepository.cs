@@ -6,6 +6,7 @@ namespace Core.Interfaces.IRepositories
     {
         Task<User?> GetByUsernameAsync(string username);
         Task<User?> GetByEmailAsync(string email);
+        Task<User?> GetByPasswordResetTokenAsync(string token);
         Task<IEnumerable<User>> SearchUsersAsync(string searchTerm);
     }
 }

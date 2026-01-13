@@ -62,12 +62,12 @@ namespace API.Controllers
 
     public class SubscriptionDto
     {
-        public string Endpoint { get; set; }
-        public Dictionary<string, string> Keys { get; set; }
+        public string Endpoint { get; set; } = null!;
+        public Dictionary<string, string> Keys { get; set; }= null!;
     }
 
     public class UnsubscribeDto
     {
-        public string Endpoint { get; set; }
+        public string Endpoint { get; set; }= null!;
     }
 }

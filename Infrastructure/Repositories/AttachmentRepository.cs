@@ -81,7 +81,7 @@ namespace Infrastructure.Repositories
  
                 var attachments = await _context.Attachments
                     .Include(a => a.Message)
-                    .Where(a => a.Message.ConversationId == conversationId)
+                    .Where(a => a.Message.ConversationId == conversationId && !a.Message.IsDeleted)
                     .OrderByDescending(a => a.UploadedAt)
                     .ToListAsync();
  

@@ -10,5 +10,7 @@ namespace Core.Interfaces.IServices
         Task<bool> LogoutAsync(int userId);
         Task<UserAuthDto?> GetCurrentUserAsync(int userId);
         Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request);
+        Task<AuthResponse> ForgotPasswordAsync(ForgotPasswordRequest request);
+        Task<AuthResponse> ResetPasswordAsync(ResetPasswordRequest request);
     }
 }

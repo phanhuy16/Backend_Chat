@@ -19,15 +19,18 @@ namespace Infrastructure.Services
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthenticationService> _logger;
+        private readonly IEmailService _emailService;
 
         public AuthenticationService(
             IUserRepository userRepository,
             IConfiguration configuration,
-            ILogger<AuthenticationService> logger)
+            ILogger<AuthenticationService> logger,
+            IEmailService emailService)
         {
             _userRepository = userRepository;
             _configuration = configuration;
             _logger = logger;
+            _emailService = emailService;
         }
 
         public async Task<UserAuthDto?> GetCurrentUserAsync(int userId)
@@ -315,6 +318,70 @@ namespace Infrastructure.Services
                 return new AuthResponse { Success = false, Message = "Internal server error during Google login" };
             }
         }
+
+        public async Task<AuthResponse> ForgotPasswordAsync(ForgotPasswordRequest request)
+        {
+            try
+            {
+                var user = await _userRepository.GetByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    return new AuthResponse { Success = false, Message = "Email không tồn tại trong hệ thống" };
+                }
+
+                var token = Guid.NewGuid().ToString();
+                user.PasswordResetToken = token;
+                user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+
+                await _userRepository.UpdateAsync(user);
+
+                // Mock URL for now - in real app, get base URL from config
+                // Assuming frontend runs on http://localhost:3000
+                var resetLink = $"http://localhost:3000/reset-password?token={token}";
+                var message = $"<h3>Yêu cầu đặt lại mật khẩu</h3><p>Vui lòng click vào link dưới đây để đặt lại mật khẩu của bạn:</p><a href='{resetLink}'>Đặt lại mật khẩu</a>";
+
+                await _emailService.SendEmailAsync(user.Email!, "Đặt lại mật khẩu ChatApp", message);
+
+                return new AuthResponse { Success = true, Message = "Đã gửi hướng dẫn đặt lại mật khẩu vào email của bạn" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ForgotPasswordAsync");
+                return new AuthResponse { Success = false, Message = $"Lỗi: {ex.Message}" };
+            }
+        }
+
+        public async Task<AuthResponse> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            try
+            {
+                var user = await _userRepository.GetByPasswordResetTokenAsync(request.Token);
+                if (user == null)
+                {
+                    return new AuthResponse { Success = false, Message = "Token không hợp lệ hoặc đã hết hạn" };
+                }
+
+                if (user.PasswordResetTokenExpiry < DateTime.UtcNow)
+                {
+                    return new AuthResponse { Success = false, Message = "Token đã hết hạn" };
+                }
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                user.PasswordResetToken = null;
+                user.PasswordResetTokenExpiry = null;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await _userRepository.UpdateAsync(user);
+
+                return new AuthResponse { Success = true, Message = "Đặt lại mật khẩu thành công" };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in ResetPasswordAsync");
+                return new AuthResponse { Success = false, Message = "Có lỗi xảy ra khi đặt lại mật khẩu" };
+            }
+        }
+
 
         private string GenerateJwtToken(User user)
         {

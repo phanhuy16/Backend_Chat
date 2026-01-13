@@ -44,6 +44,20 @@ namespace Infrastructure.Repositories
             }
         }
 
+        public async Task<User?> GetByPasswordResetTokenAsync(string token)
+        {
+            try
+            {
+                return await _context.Users
+                    .FirstOrDefaultAsync(u => u.PasswordResetToken == token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi truy vấn User theo reset token");
+                return null;
+            }
+        }
+
         public async Task<IEnumerable<User>> SearchUsersAsync(string searchTerm)
         {
             try
