@@ -58,6 +58,20 @@ namespace Infrastructure.Repositories
             }
         }
 
+        public async Task<User?> GetByFacebookIdAsync(string facebookId)
+        {
+            try
+            {
+                return await _context.Users
+                    .FirstOrDefaultAsync(u => u.FacebookId == facebookId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi truy vấn User theo Facebook ID: {FacebookId}", facebookId);
+                return null;
+            }
+        }
+
         public async Task<IEnumerable<User>> SearchUsersAsync(string searchTerm)
         {
             try

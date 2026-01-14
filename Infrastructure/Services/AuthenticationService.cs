@@ -11,6 +11,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace Infrastructure.Services
 {
@@ -316,6 +317,126 @@ namespace Infrastructure.Services
             {
                 _logger.LogError(ex, "Error during Google login");
                 return new AuthResponse { Success = false, Message = "Internal server error during Google login" };
+            }
+        }
+
+        public async Task<AuthResponse> LoginWithFacebookAsync(FacebookLoginRequest request)
+        {
+            try
+            {
+                // 1. Validate Facebook access token by calling Facebook Graph API
+                using var httpClient = new HttpClient();
+                var appId = _configuration["Authentication:Facebook:AppId"];
+                var appSecret = _configuration["Authentication:Facebook:AppSecret"];
+
+                // Verify token with Facebook
+                var verifyUrl = $"https://graph.facebook.com/debug_token?input_token={request.AccessToken}&access_token={appId}|{appSecret}";
+                var verifyResponse = await httpClient.GetAsync(verifyUrl);
+
+                if (!verifyResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Facebook token verification failed");
+                    return new AuthResponse { Success = false, Message = "Invalid Facebook Token" };
+                }
+
+                var verifyJson = await verifyResponse.Content.ReadAsStringAsync();
+                var verifyData = System.Text.Json.JsonDocument.Parse(verifyJson);
+                
+                if (!verifyData.RootElement.GetProperty("data").GetProperty("is_valid").GetBoolean())
+                {
+                    _logger.LogError("Facebook token is not valid");
+                    return new AuthResponse { Success = false, Message = "Invalid Facebook Token" };
+                }
+
+                var facebookUserId = verifyData.RootElement.GetProperty("data").GetProperty("user_id").GetString();
+
+                // 2. Get user info from Facebook
+                var userInfoUrl = $"https://graph.facebook.com/me?fields=id,name,email,picture&access_token={request.AccessToken}";
+                var userInfoResponse = await httpClient.GetAsync(userInfoUrl);
+
+                if (!userInfoResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError("Facebook user info retrieval failed");
+                    return new AuthResponse { Success = false, Message = "Failed to get Facebook user info" };
+                }
+
+                var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
+                var userInfo = JsonDocument.Parse(userInfoJson);
+
+                var email = userInfo.RootElement.TryGetProperty("email", out var emailProp) 
+                    ? emailProp.GetString() 
+                    : null;
+                var name = userInfo.RootElement.GetProperty("name").GetString();
+                var pictureUrl = userInfo.RootElement.GetProperty("picture")
+                    .GetProperty("data")
+                    .GetProperty("url").GetString();
+
+                // If no email provided by Facebook, we can't proceed (email is required)
+                if (string.IsNullOrEmpty(email))
+                {
+                    _logger.LogError("Facebook user did not provide email");
+                    return new AuthResponse { Success = false, Message = "Email permission required" };
+                }
+
+                // 3. Check if user exists by FacebookId first, then by email
+                var user = await _userRepository.GetByFacebookIdAsync(facebookUserId!);
+                
+                if (user == null)
+                {
+                    // Check by email
+                    user = await _userRepository.GetByEmailAsync(email);
+                    
+                    if (user != null)
+                    {
+                        // Link Facebook ID to existing account
+                        user.FacebookId = facebookUserId;
+                        await _userRepository.UpdateAsync(user);
+                    }
+                    else
+                    {
+                        // 4. Create new user if doesn't exist
+                        user = new User
+                        {
+                            UserName = email,
+                            Email = email,
+                            DisplayName = name ?? email,
+                            Avatar = pictureUrl ?? "https://via.placeholder.com/150",
+                            FacebookId = facebookUserId,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            Status = StatusUser.Online,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString())
+                        };
+                        await _userRepository.AddAsync(user);
+                    }
+                }
+
+                // 5. Generate JWT token
+                var token = GenerateJwtToken(user);
+                var refreshToken = GenerateRefreshToken();
+
+                user.RefreshToken = refreshToken;
+                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+                user.Status = StatusUser.Online;
+
+                await _userRepository.UpdateAsync(user);
+
+                _logger.LogInformation("User {Email} logged in via Facebook successfully", email);
+
+                return new AuthResponse
+                {
+                    Success = true,
+                    Message = "Facebook login successful",
+                    User = MapToUserAuthDto(user),
+                    Token = token,
+                    RefreshToken = refreshToken,
+                    ExpiresIn = DateTime.UtcNow.AddMinutes(30)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Facebook login");
+                return new AuthResponse { Success = false, Message = "Internal server error during Facebook login" };
             }
         }
 

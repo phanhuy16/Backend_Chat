@@ -178,6 +178,21 @@ namespace API.Controllers
             return Ok(result);
         }
 
+        [HttpPost("facebook-login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> FacebookLogin([FromBody] FacebookLoginRequest request)
+        {
+            if (string.IsNullOrEmpty(request.AccessToken))
+                return BadRequest("AccessToken is required");
+
+            var result = await _authService.LoginWithFacebookAsync(request);
+
+            if (!result.Success)
+                return BadRequest(result);
+
+            return Ok(result);
+        }
+
         [HttpPost("forgot-password")]
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)

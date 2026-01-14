@@ -1,11 +1,9 @@
-using Core.Entities;
 using Core.Interfaces.IServices;
 using Infrastructure.Data;
 using Lib.Net.Http.WebPush;
+using Lib.Net.Http.WebPush.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-
-using Lib.Net.Http.WebPush.Authentication;
 
 namespace Infrastructure.Services
 {
@@ -32,7 +30,7 @@ namespace Infrastructure.Services
 
         public string GetPublicKey()
         {
-            return _configuration["Vapid:PublicKey"];
+            return _configuration["Vapid:PublicKey"]!;
         }
 
         public async Task SendNotificationAsync(int userId, string title, string message, string? url = null)
@@ -48,8 +46,8 @@ namespace Infrastructure.Services
                     Endpoint = sub.Endpoint,
                     Keys = new Dictionary<string, string>
                     {
-                        { "p256dh", sub.P256DH },
-                        { "auth", sub.Auth }
+                        { "p256dh", sub.P256DH! },
+                        { "auth", sub.Auth! }
                     }
                 };
 
@@ -58,10 +56,10 @@ namespace Infrastructure.Services
                     Topic = title,
                     Urgency = PushMessageUrgency.High,
                 };
-                
+
                 // Note: The library sends the payload as string/json usually. 
                 // We'll wrap it in a simple JSON structure
-                var payload = System.Text.Json.JsonSerializer.Serialize(new 
+                var payload = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     title,
                     message,
@@ -122,7 +120,7 @@ namespace Infrastructure.Services
         {
             var sub = await _context.PushSubscriptions
                 .FirstOrDefaultAsync(s => s.Endpoint == endpoint && s.UserId == userId);
-            
+
             if (sub != null)
             {
                 _context.PushSubscriptions.Remove(sub);

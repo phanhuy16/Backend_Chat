@@ -19,6 +19,7 @@ namespace Core.Entities
         public bool ReadReceiptsEnabled { get; set; } = true;
         public string? PasswordResetToken { get; set; }
         public DateTime? PasswordResetTokenExpiry { get; set; }
+        public string? FacebookId { get; set; }
 
         // Navigation properties
         public ICollection<Conversations> CreatedConversations { get; set; } = new List<Conversations>();
