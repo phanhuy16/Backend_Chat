@@ -580,7 +580,10 @@ namespace Infrastructure.Services
                 Email = user.Email!,
                 DisplayName = user.DisplayName,
                 Avatar = user.Avatar,
-                Status = user.Status
+                Status = user.Status,
+                LastSeenPrivacy = user.LastSeenPrivacy,
+                OnlineStatusPrivacy = user.OnlineStatusPrivacy,
+                ReadReceiptsEnabled = user.ReadReceiptsEnabled
             };
         }
     }

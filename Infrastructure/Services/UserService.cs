@@ -162,8 +162,11 @@ namespace Infrastructure.Services
                 if (user == null)
                     return null!;
 
-                user.DisplayName = request.DisplayName;
-                user.Bio = request.Bio;
+                if (!string.IsNullOrWhiteSpace(request.DisplayName))
+                    user.DisplayName = request.DisplayName;
+
+                if (request.Bio != null) user.Bio = request.Bio;
+                if (request.Avatar != null) user.Avatar = request.Avatar;
 
                 if (request.LastSeenPrivacy != null) user.LastSeenPrivacy = request.LastSeenPrivacy;
                 if (request.OnlineStatusPrivacy != null) user.OnlineStatusPrivacy = request.OnlineStatusPrivacy;

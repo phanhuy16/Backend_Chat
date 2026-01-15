@@ -44,7 +44,24 @@ namespace API.Controllers
             try
             {
                 var blockedUsers = await _blockedUserRepository.GetBlockedUsersAsync(userId);
-                return Ok(blockedUsers);
+                
+                var dtos = blockedUsers.Select(b => new BlockedUserDto
+                {
+                    Id = b.Id,
+                    BlockerId = b.BlockerId,
+                    BlockedUserId = b.BlockedUserId,
+                    CreatedAt = b.CreatedAt,
+                    BlockedUserProfile = b.BlockedUserProfile != null ? new BlockedUserProfileDto
+                    {
+                        Id = b.BlockedUserProfile.Id,
+                        UserName = b.BlockedUserProfile.UserName ?? "",
+                        DisplayName = b.BlockedUserProfile.DisplayName,
+                        Avatar = b.BlockedUserProfile.Avatar,
+                        Status = b.BlockedUserProfile.Status
+                    } : null
+                }).ToList();
+
+                return Ok(dtos);
             }
             catch (Exception ex)
             {
