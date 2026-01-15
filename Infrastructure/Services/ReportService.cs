@@ -142,6 +142,7 @@ namespace Infrastructure.Services
                     ReportedUserName = r.ReportedUser.DisplayName ?? r.ReportedUser.UserName ?? "Unknown",
                     ReporterName = r.Reporter.DisplayName ?? r.Reporter.UserName ?? "Unknown",
                     Reason = r.Reason,
+                    Description = r.Description,
                     ReportedAt = r.ReportedAt,
                     Status = r.Status
                 }).ToList();
@@ -166,6 +167,7 @@ namespace Infrastructure.Services
                     ReportedUserName = r.ReportedUser.DisplayName ?? r.ReportedUser.UserName ?? "Unknown",
                     ReporterName = r.Reporter.DisplayName ?? r.Reporter.UserName ?? "Unknown",
                     Reason = r.Reason,
+                    Description = r.Description,
                     ReportedAt = r.ReportedAt,
                     Status = r.Status
                 }).ToList();

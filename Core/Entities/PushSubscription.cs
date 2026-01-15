@@ -12,7 +12,7 @@ namespace Core.Entities
         public int UserId { get; set; }
 
         [ForeignKey(nameof(UserId))]
-        public virtual User User { get; set; }
+        public virtual User User { get; set; } = null!;
 
         [Required]
         public string Endpoint { get; set; } = string.Empty;

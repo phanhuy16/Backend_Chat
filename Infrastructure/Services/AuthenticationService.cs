@@ -1,9 +1,4 @@
-﻿using Core.DTOs.Auth;
-using Core.Entities;
-using Core.Enums;
-using Core.Interfaces.IRepositories;
-using Core.Interfaces.IServices;
-using Google.Apis.Auth;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -12,6 +7,12 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Core.DTOs.Auth;
+using Core.Entities;
+using Core.Enums;
+using Core.Interfaces.IRepositories;
+using Core.Interfaces.IServices;
+using Google.Apis.Auth;
 
 namespace Infrastructure.Services
 {
@@ -21,17 +22,20 @@ namespace Infrastructure.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IEmailService _emailService;
+        private readonly UserManager<User> _userManager;
 
         public AuthenticationService(
             IUserRepository userRepository,
             IConfiguration configuration,
             ILogger<AuthenticationService> logger,
-            IEmailService emailService)
+            IEmailService emailService,
+            UserManager<User> userManager)
         {
             _userRepository = userRepository;
             _configuration = configuration;
             _logger = logger;
             _emailService = emailService;
+            _userManager = userManager;
         }
 
         public async Task<UserAuthDto?> GetCurrentUserAsync(int userId)
@@ -39,7 +43,7 @@ namespace Infrastructure.Services
             try
             {
                 var user = await _userRepository.GetByIdAsync(userId);
-                return user != null ? MapToUserAuthDto(user) : null;
+                return user != null ? await MapToUserAuthDtoAsync(user) : null;
             }
             catch (Exception ex)
             {
@@ -73,7 +77,7 @@ namespace Infrastructure.Services
                 }
 
                 // Generate tokens
-                var token = GenerateJwtToken(user);
+                var token = await GenerateJwtTokenAsync(user);
                 var refreshToken = GenerateRefreshToken();
 
                 user.RefreshToken = refreshToken;
@@ -89,7 +93,7 @@ namespace Infrastructure.Services
                 {
                     Success = true,
                     Message = "Login successful",
-                    User = MapToUserAuthDto(user),
+                    User = await MapToUserAuthDtoAsync(user),
                     Token = token,
                     RefreshToken = refreshToken,
                     ExpiresIn = DateTime.UtcNow.AddMinutes(30)
@@ -156,7 +160,7 @@ namespace Infrastructure.Services
                     return new AuthResponse { Success = false, Message = "Invalid refresh token" };
                 }
 
-                var newToken = GenerateJwtToken(user);
+                var newToken = await GenerateJwtTokenAsync(user);
                 var newRefreshToken = GenerateRefreshToken();
 
                 user.RefreshToken = newRefreshToken;
@@ -171,7 +175,7 @@ namespace Infrastructure.Services
                     Success = true,
                     Message = "Token refreshed successfully",
                     Token = newToken,
-                    User = MapToUserAuthDto(user),
+                    User = await MapToUserAuthDtoAsync(user),
                     RefreshToken = newRefreshToken,
                     ExpiresIn = DateTime.UtcNow.AddMinutes(30)
                 };
@@ -227,7 +231,7 @@ namespace Infrastructure.Services
 
                 await _userRepository.AddAsync(user);
 
-                var token = GenerateJwtToken(user);
+                var token = await GenerateJwtTokenAsync(user);
                 var refreshToken = GenerateRefreshToken();
 
                 user.RefreshToken = refreshToken;
@@ -241,7 +245,7 @@ namespace Infrastructure.Services
                 {
                     Success = true,
                     Message = "User registered successfully",
-                    User = MapToUserAuthDto(user),
+                    User = await MapToUserAuthDtoAsync(user),
                     Token = token,
                     RefreshToken = refreshToken,
                     ExpiresIn = DateTime.UtcNow.AddMinutes(30)
@@ -289,7 +293,7 @@ namespace Infrastructure.Services
                 }
 
                 // 4. Tạo JWT token giống như hàm Login thông thường
-                var token = GenerateJwtToken(user);
+                var token = await GenerateJwtTokenAsync(user);
                 var refreshToken = GenerateRefreshToken();
 
                 user.RefreshToken = refreshToken;
@@ -302,7 +306,7 @@ namespace Infrastructure.Services
                 {
                     Success = true,
                     Message = "Google login successful",
-                    User = MapToUserAuthDto(user),
+                    User = await MapToUserAuthDtoAsync(user),
                     Token = token,
                     RefreshToken = refreshToken,
                     ExpiresIn = DateTime.UtcNow.AddMinutes(30)
@@ -412,7 +416,7 @@ namespace Infrastructure.Services
                 }
 
                 // 5. Generate JWT token
-                var token = GenerateJwtToken(user);
+                var token = await GenerateJwtTokenAsync(user);
                 var refreshToken = GenerateRefreshToken();
 
                 user.RefreshToken = refreshToken;
@@ -427,7 +431,7 @@ namespace Infrastructure.Services
                 {
                     Success = true,
                     Message = "Facebook login successful",
-                    User = MapToUserAuthDto(user),
+                    User = await MapToUserAuthDtoAsync(user),
                     Token = token,
                     RefreshToken = refreshToken,
                     ExpiresIn = DateTime.UtcNow.AddMinutes(30)
@@ -504,19 +508,26 @@ namespace Infrastructure.Services
         }
 
 
-        private string GenerateJwtToken(User user)
+        private async Task<string> GenerateJwtTokenAsync(User user)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
             var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SigningKey"]!));
             var credentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var roles = await _userManager.GetRolesAsync(user);
+            
+            var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.UserName!),
-                      new Claim(ClaimTypes.Email, user.Email!),
+                new Claim(ClaimTypes.Email, user.Email!),
                 new Claim("DisplayName", user.DisplayName)
             };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
@@ -571,8 +582,11 @@ namespace Infrastructure.Services
             }
         }
 
-        private UserAuthDto MapToUserAuthDto(User user)
+        private async Task<UserAuthDto> MapToUserAuthDtoAsync(User user)
         {
+            var roles = await _userManager.GetRolesAsync(user);
+            var mainRole = roles.FirstOrDefault() ?? "User";
+
             return new UserAuthDto
             {
                 Id = user.Id,
@@ -583,7 +597,8 @@ namespace Infrastructure.Services
                 Status = user.Status,
                 LastSeenPrivacy = user.LastSeenPrivacy,
                 OnlineStatusPrivacy = user.OnlineStatusPrivacy,
-                ReadReceiptsEnabled = user.ReadReceiptsEnabled
+                ReadReceiptsEnabled = user.ReadReceiptsEnabled,
+                Role = mainRole
             };
         }
     }

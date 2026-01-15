@@ -2,6 +2,7 @@
 using Core.Interfaces.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace API.Controllers
 {
@@ -93,11 +94,19 @@ namespace API.Controllers
 
         // GET: Get reports by reporter
         [HttpGet("reporter/{reporterId}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetReportsByReporter(int reporterId)
         {
             try
             {
+                // Allow admin OR the user themselves
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var isAdmin = User.IsInRole("Admin");
+
+                if (!isAdmin && currentUserId != reporterId)
+                {
+                    return Forbid();
+                }
+
                 var reports = await _reportService.GetReportsByReporterAsync(reporterId);
                 return Ok(reports);
             }

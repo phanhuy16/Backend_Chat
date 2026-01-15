@@ -6,10 +6,6 @@ using Core.Enums;
 using Core.Interfaces.IRepositories;
 using Core.Interfaces.IServices;
 using Microsoft.Extensions.Logging;
-
-using Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
 namespace Infrastructure.Services
