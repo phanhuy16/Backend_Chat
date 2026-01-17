@@ -7,5 +7,6 @@ namespace Core.Enums
         Image = 1,
         File = 2,
         Voice = 3,
+        Poll = 4,
     }
 }

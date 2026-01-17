@@ -1,4 +1,5 @@
-﻿using Core.DTOs.Attachments;
+﻿using Core.DTOs;
+using Core.DTOs.Attachments;
 using Core.DTOs.Messages;
 using Core.DTOs.Users;
 using Core.Entities;
@@ -480,7 +481,34 @@ namespace Infrastructure.Services
                 ParentMessage = message.ParentMessage != null ? MapToMessageDto(message.ParentMessage, currentUserId) : null,
                 ForwardedFromId = message.ForwardedFromId,
                 IsReadByMe = currentUserId != 0 && _messageRepository.GetMessageReadStatusesAsync(message.Id).Result.Any(s => s.UserId == currentUserId),
-                ReadCount = _messageRepository.GetMessageReadStatusesAsync(message.Id).Result.Count()
+                ReadCount = _messageRepository.GetMessageReadStatusesAsync(message.Id).Result.Count(),
+                PollId = message.PollId,
+                Poll = message.Poll != null ? new PollDto
+                {
+                    Id = message.Poll.Id,
+                    Question = message.Poll.Question,
+                    AllowMultipleVotes = message.Poll.AllowMultipleVotes,
+                    ConversationId = message.Poll.ConversationId,
+                    CreatorId = message.Poll.CreatorId,
+                    CreatorName = message.Poll.Creator != null ? message.Poll.Creator.DisplayName : "Unknown",
+                    CreatedAt = message.Poll.CreatedAt,
+                    EndsAt = message.Poll.EndsAt,
+                    TotalVotes = message.Poll.Options.Sum(o => o.Votes.Count),
+                    HasVoted = message.Poll.Options.Any(o => o.Votes.Any(v => v.UserId == currentUserId)),
+                    Options = message.Poll.Options.Select(o => new PollOptionDto
+                    {
+                        Id = o.Id,
+                        Text = o.Text,
+                        VoteCount = o.Votes.Count,
+                        IsVotedByCurrentUser = o.Votes.Any(v => v.UserId == currentUserId),
+                        Votes = o.Votes.Select(v => new PollVoteDto
+                        {
+                            UserId = v.UserId,
+                            Username = v.User != null ? v.User.DisplayName : "Unknown",
+                            AvatarUrl = v.User != null ? v.User.Avatar : ""
+                        }).ToList()
+                    }).ToList()
+                } : null
             };
         }
 

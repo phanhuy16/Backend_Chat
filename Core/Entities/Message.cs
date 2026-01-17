@@ -1,4 +1,5 @@
 ﻿using Core.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Core.Entities
 {
@@ -20,6 +21,10 @@ namespace Core.Entities
         // Foreign keys
         public Conversations Conversation { get; set; } = null!;
         public User Sender { get; set; } = null!;
+        
+        public int? PollId { get; set; }
+        [ForeignKey("PollId")]
+        public Poll? Poll { get; set; }
 
         // Navigation properties
         public ICollection<MessageReaction> Reactions { get; set; } = new List<MessageReaction>();

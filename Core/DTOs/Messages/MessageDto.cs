@@ -26,5 +26,7 @@ namespace Core.DTOs.Messages
         public int? ForwardedFromId { get; set; }
         public bool IsReadByMe { get; set; }
         public int ReadCount { get; set; }
+        public int? PollId { get; set; }
+        public PollDto? Poll { get; set; }
     }
 }

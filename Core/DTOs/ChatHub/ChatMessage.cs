@@ -14,5 +14,6 @@ namespace Core.DTOs.ChatHub
         public DateTime CreatedAt { get; set; }
         public int? ParentMessageId { get; set; }
         public ChatMessage? ParentMessage { get; set; }
+        public PollDto? Poll { get; set; }
     }
 }

@@ -134,7 +134,8 @@ namespace API.Hubs
                         MessageId = messageDto.ParentMessage.Id,
                         Content = messageDto.ParentMessage.Content,
                         SenderName = messageDto.ParentMessage.Sender.DisplayName
-                    } : null
+                    } : null,
+                    Poll = messageDto.Poll
                 };
 
                 string groupName = $"conversation_{conversationId}";
@@ -317,7 +318,23 @@ namespace API.Hubs
         {
             try
             {
-                var chatMessage = await _messageService.ForwardMessageAsync(messageId, targetConversationId, senderId);
+                var messageDto = await _messageService.ForwardMessageAsync(messageId, targetConversationId, senderId);
+                
+                var sender = await _userService.GetUserByIdAsync(senderId);
+
+                var chatMessage = new ChatMessage()
+                {
+                    MessageId = messageDto.Id,
+                    ConversationId = targetConversationId,
+                    SenderId = senderId,
+                    SenderName = sender?.DisplayName ?? sender?.UserName!,
+                    SenderAvatar = sender?.Avatar!,
+                    Content = messageDto.Content,
+                    MessageType = messageDto.MessageType,
+                    CreatedAt = messageDto.CreatedAt,
+                    Poll = messageDto.Poll
+                };
+
                 string groupName = $"conversation_{targetConversationId}";
                 await Clients.Group(groupName).SendAsync("ReceiveMessage", chatMessage);
             }

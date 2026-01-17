@@ -1,10 +1,13 @@
 ﻿using API.Hubs;
+using Core.Entities;
 using Core.Interfaces.IRepositories;
 using Core.Interfaces.IServices;
+using Core.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -62,6 +65,22 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<ChatAppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Configure ASP.NET Core Identity
+builder.Services.AddIdentity<User, IdentityRole<int>>(options =>
+{
+    // Password settings (optional - customize as needed)
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 6;
+    
+    // User settings
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<ChatAppDbContext>()
+.AddDefaultTokenProviders();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -128,6 +147,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ICallService, CallService>();
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IPollService, PollService>();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" };
 

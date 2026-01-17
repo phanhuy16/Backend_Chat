@@ -24,6 +24,9 @@ namespace Infrastructure.Data
         public DbSet<MessageDeletedForUser> MessageDeletedForUsers { get; set; } = null!;
         public DbSet<MessageReadStatus> MessageReadStatuses { get; set; } = null!;
         public DbSet<PushSubscription> PushSubscriptions { get; set; } = null!;
+        public DbSet<Poll> Polls { get; set; } = null!;
+        public DbSet<PollOption> PollOptions { get; set; } = null!;
+        public DbSet<PollVote> PollVotes { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -194,6 +197,38 @@ namespace Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Poll Configuration
+            modelBuilder.Entity<Poll>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Question).IsRequired();
+                entity.HasOne(e => e.Creator).WithMany()
+                    .HasForeignKey(e => e.CreatorId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Conversation).WithMany()
+                    .HasForeignKey(e => e.ConversationId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // PollOption Configuration
+            modelBuilder.Entity<PollOption>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Text).IsRequired();
+                entity.HasOne(e => e.Poll).WithMany(p => p.Options)
+                    .HasForeignKey(e => e.PollId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // PollVote Configuration
+            modelBuilder.Entity<PollVote>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.PollOption).WithMany(o => o.Votes)
+                    .HasForeignKey(e => e.PollOptionId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User).WithMany()
+                    .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Restrict);
+                // Ensure a user can only vote once per option (or poll? logic might handle multiple votes if allowed, but uniqueness per option/user is good)
+                entity.HasIndex(new[] { "PollOptionId", "UserId" }).IsUnique();
             });
         }
     }
