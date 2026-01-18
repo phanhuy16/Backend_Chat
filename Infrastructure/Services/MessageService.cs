@@ -158,7 +158,8 @@ namespace Infrastructure.Services
                     message.IsModified = true;
                     message.UpdatedAt = DateTime.UtcNow;
                     await _messageRepository.UpdateAsync(message);
-                    return MapToMessageDto(message);
+                    await _messageRepository.UpdateAsync(message);
+                    return await MapToMessageDto(message);
                 }
                 else
                 {
@@ -178,7 +179,12 @@ namespace Infrastructure.Services
             try
             {
                 var messages = await _messageRepository.GetConversationMessagesAsync(conversationId, userId, pageNumber, pageSize);
-                return messages.Select(m => MapToMessageDto(m, userId)).ToList();
+                var messageDtos = new List<MessageDto>();
+                foreach (var m in messages)
+                {
+                    messageDtos.Add(await MapToMessageDto(m, userId));
+                }
+                return messageDtos;
             }
             catch (Exception ex)
             {
@@ -231,7 +237,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null)
+        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null)
         {
             try
             {
@@ -245,7 +251,8 @@ namespace Infrastructure.Services
                     MessageType = messageType,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                    ParentMessageId = parentMessageId
+                    ParentMessageId = parentMessageId,
+                    ScheduledAt = scheduledAt
                 };
 
                 await _messageRepository.AddAsync(message);
@@ -296,7 +303,7 @@ namespace Infrastructure.Services
                     _logger.LogError(ex, "Error sending push notification");
                 }
 
-                return MapToMessageDto(savedMessage);
+                return await MapToMessageDto(savedMessage);
             }
             catch (Exception ex)
             {
@@ -385,7 +392,7 @@ namespace Infrastructure.Services
                     savedMessage.Sender = await _userRepository.GetByIdAsync(senderId);
                 }
 
-                return MapToMessageDto(savedMessage, senderId);
+                return await MapToMessageDto(savedMessage, senderId);
             }
             catch (Exception ex)
             {
@@ -399,7 +406,12 @@ namespace Infrastructure.Services
             try
             {
                 var messages = await _messageRepository.SearchMessagesAsync(conversationId, query);
-                return messages.Select(m => MapToMessageDto(m, userId)).ToList();
+                var messageDtos = new List<MessageDto>();
+                foreach (var m in messages)
+                {
+                    messageDtos.Add(await MapToMessageDto(m, userId));
+                }
+                return messageDtos;
             }
             catch (Exception ex)
             {
@@ -413,7 +425,12 @@ namespace Infrastructure.Services
             try
             {
                 var messages = await _messageRepository.GetPinnedMessagesAsync(conversationId);
-                return messages.Select(m => MapToMessageDto(m, userId)).ToList();
+                var messageDtos = new List<MessageDto>();
+                foreach (var m in messages)
+                {
+                    messageDtos.Add(await MapToMessageDto(m, userId));
+                }
+                return messageDtos;
             }
             catch (Exception ex)
             {
@@ -442,8 +459,10 @@ namespace Infrastructure.Services
             }
         }
 
-        private MessageDto MapToMessageDto(Message message, int currentUserId = 0)
+        public async Task<MessageDto> MapToMessageDto(Message message, int currentUserId = 0)
         {
+            var readStatuses = await _messageRepository.GetMessageReadStatusesAsync(message.Id);
+            
             return new MessageDto
             {
                 Id = message.Id,
@@ -459,7 +478,7 @@ namespace Infrastructure.Services
                 },
                 Content = message.Content,
                 MessageType = message.MessageType,
-                CreatedAt = message.CreatedAt,
+                CreatedAt = DateTime.SpecifyKind(message.CreatedAt, DateTimeKind.Utc),
                 Reactions = message.Reactions.Select(r => new ReactionDto
                 {
                     Id = r.Id,
@@ -478,10 +497,11 @@ namespace Infrastructure.Services
                 IsPinned = message.IsPinned,
                 IsModified = message.IsModified,
                 ParentMessageId = message.ParentMessageId,
-                ParentMessage = message.ParentMessage != null ? MapToMessageDto(message.ParentMessage, currentUserId) : null,
+                ParentMessage = message.ParentMessage != null ? await MapToMessageDto(message.ParentMessage, currentUserId) : null,
                 ForwardedFromId = message.ForwardedFromId,
-                IsReadByMe = currentUserId != 0 && _messageRepository.GetMessageReadStatusesAsync(message.Id).Result.Any(s => s.UserId == currentUserId),
-                ReadCount = _messageRepository.GetMessageReadStatusesAsync(message.Id).Result.Count(),
+                ScheduledAt = message.ScheduledAt.HasValue ? DateTime.SpecifyKind(message.ScheduledAt.Value, DateTimeKind.Utc) : null,
+                IsReadByMe = currentUserId != 0 && readStatuses.Any(s => s.UserId == currentUserId),
+                ReadCount = readStatuses.Count(),
                 PollId = message.PollId,
                 Poll = message.Poll != null ? new PollDto
                 {

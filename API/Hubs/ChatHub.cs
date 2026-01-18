@@ -76,13 +76,12 @@ namespace API.Hubs
             }
         }
 
-        // Send message to conversation
-        public async Task SendMessage(int conversationId, int senderId, string? content, MessageType messageType = 0, int? parentMessageId = null)
+        // Send Message
+        public async Task SendMessage(int conversationId, int senderId, string content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null)
         {
             try
             {
                 var conversation = await _conversationService.GetConversationAsync(conversationId);
-
                 if (conversation == null)
                 {
                     await Clients.Caller.SendAsync("Error", "Conversation not found");
@@ -91,30 +90,28 @@ namespace API.Hubs
 
                 if (conversation.ConversationType == ConversationType.Direct)
                 {
-                    // Get the other member ID
-                    var otherMemberId = conversation.Members
-                        .FirstOrDefault(m => m.Id != senderId)?.Id;
-
-                    if (otherMemberId == null)
+                    var otherMember = conversation.Members.FirstOrDefault(m => m.Id != senderId);
+                    if (otherMember != null)
                     {
-                        await Clients.Caller.SendAsync("Error", "Invalid conversation members");
-                        return;
-                    }
-
-                    // Check if sender is blocked (2-way check)
-                    var isBlocked = await _blockedUserRepository.IsUserBlockedAsync(senderId, otherMemberId.Value);
-
-                    if (isBlocked)
-                    {
-                        await Clients.Caller.SendAsync("Error", "Không thể gửi tin nhắn - bạn đã bị chặn hoặc đã chặn người dùng này");
-                        _logger.LogWarning($"User {senderId} attempted to send message in blocked conversation with {otherMemberId}");
-                        return;
+                        var isBlocked = await _blockedUserRepository.IsUserBlockedAsync(senderId, otherMember.Id);
+                        if (isBlocked)
+                        {
+                            _logger.LogWarning($"User {senderId} attempted to send message in blocked conversation with {otherMember.Id}");
+                            await Clients.Caller.SendAsync("Error", "Không thể gửi tin nhắn - bạn đã bị chặn hoặc đã chặn người dùng này");
+                            return;
+                        }
                     }
                 }
 
-                // For group conversations, no block check needed (can implement group-specific rules if needed)
+                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType, parentMessageId, scheduledAt);
 
-                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType, parentMessageId);
+                // For scheduled messages, don't broadcast immediately to other users
+                if (scheduledAt != null && scheduledAt > DateTime.UtcNow)
+                {
+                    // Optionally notify the sender that it's scheduled
+                    await Clients.Caller.SendAsync("MessageScheduled", messageDto);
+                    return;
+                }
 
                 var sender = await _userService.GetUserByIdAsync(senderId);
 

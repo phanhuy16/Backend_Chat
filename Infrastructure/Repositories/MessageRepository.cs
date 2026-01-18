@@ -36,7 +36,8 @@ namespace Infrastructure.Repositories
                         .ThenInclude(p => p!.Options)
                             .ThenInclude(o => o.Votes)
                                 .ThenInclude(v => v!.User)
-                    .OrderByDescending(m => m.CreatedAt)
+                .Where(m => m.ConversationId == conversationId && (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow))
+                .OrderByDescending(m => m.CreatedAt)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();
@@ -73,7 +74,7 @@ namespace Infrastructure.Repositories
                         .ThenInclude(p => p!.Options)
                             .ThenInclude(o => o.Votes)
                                 .ThenInclude(v => v!.User)
-                    .FirstOrDefaultAsync(m => m.Id == messageId);
+                .FirstOrDefaultAsync(m => m.Id == messageId && (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow));
 
                 if (message == null)
                 {
@@ -143,7 +144,8 @@ namespace Infrastructure.Repositories
                     .Where(m => m.ConversationId == conversationId && 
                                !m.IsDeleted && 
                                m.Content != null && 
-                               m.Content.ToLower().Contains(query.ToLower()))
+                               m.Content.ToLower().Contains(query.ToLower()) &&
+                               (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow))
                     .Include(m => m.Sender)
                     .Include(m => m.Reactions)
                     .Include(m => m.Attachments)
@@ -161,7 +163,7 @@ namespace Infrastructure.Repositories
         public async Task<IEnumerable<Message>> GetPinnedMessagesAsync(int conversationId)
         {
             return await _context.Messages
-                .Where(m => m.ConversationId == conversationId && m.IsPinned && !m.IsDeleted)
+                .Where(m => m.ConversationId == conversationId && m.IsPinned && !m.IsDeleted && (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow))
                 .Include(m => m.Sender)
                 .OrderByDescending(m => m.CreatedAt)
                 .ToListAsync();

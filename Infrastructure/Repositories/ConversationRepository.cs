@@ -24,7 +24,7 @@ namespace Infrastructure.Repositories
 
                 var conversation = await _context.Conversations
                          .Include(c => c.Members).ThenInclude(m => m.User)
-                         .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(50))
+                         .Include(c => c.Messages.Where(m => m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow).OrderByDescending(m => m.CreatedAt).Take(50))
                              .ThenInclude(m => m.Sender)
                          .Include(c => c.Messages)
                              .ThenInclude(m => m.Reactions)
@@ -94,7 +94,7 @@ namespace Infrastructure.Repositories
                 foreach (var conversation in conversations)
                 {
                     var latestMessages = await _context.Messages
-                        .Where(m => m.ConversationId == conversation.Id)
+                        .Where(m => m.ConversationId == conversation.Id && (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow))
                         .OrderByDescending(m => m.CreatedAt)
                         .Take(1)
                         .Include(m => m.Sender)

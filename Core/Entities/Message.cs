@@ -17,6 +17,7 @@ namespace Core.Entities
         public bool IsModified { get; set; } = false;
         public int? ParentMessageId { get; set; }
         public int? ForwardedFromId { get; set; }
+        public DateTime? ScheduledAt { get; set; }
 
         // Foreign keys
         public Conversations Conversation { get; set; } = null!;

@@ -1,4 +1,5 @@
 ﻿using API.Hubs;
+using API.Services;
 using Core.Entities;
 using Core.Interfaces.IRepositories;
 using Core.Interfaces.IServices;
@@ -148,6 +149,7 @@ builder.Services.AddScoped<ICallService, CallService>();
 builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IPollService, PollService>();
+builder.Services.AddHostedService<ScheduledMessageWorker>();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" };
 

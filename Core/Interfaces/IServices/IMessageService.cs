@@ -1,13 +1,14 @@
 ﻿
 
 using Core.DTOs.Messages;
+using Core.Entities;
 using Core.Enums;
 
 namespace Core.Interfaces.IServices
 {
     public interface IMessageService
     {
-        Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null);
+        Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null);
         Task<IEnumerable<MessageDto>> GetConversationMessagesAsync(int conversationId, int userId, int pageNumber, int pageSize);
         Task<MessageDto> EditMessageAsync(int messageId, string newContent);
         Task DeleteMessageAsync(int messageId);
@@ -21,5 +22,6 @@ namespace Core.Interfaces.IServices
         Task<IEnumerable<MessageDto>> SearchMessagesAsync(int conversationId, int userId, string query);
         Task<IEnumerable<MessageDto>> GetPinnedMessagesAsync(int conversationId, int userId);
         Task<IEnumerable<MessageReaderDto>> GetMessageReadersAsync(int messageId);
+        Task<MessageDto> MapToMessageDto(Message message, int currentUserId = 0);
     }
 }
