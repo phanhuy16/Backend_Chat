@@ -168,5 +168,58 @@ namespace Infrastructure.Repositories
                 .OrderByDescending(m => m.CreatedAt)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<Message>> SearchMessagesGloballyAsync(List<int> conversationIds, string query, int pageSize)
+        {
+            try
+            {
+                _logger.LogInformation("Searching messages globally with Query={Query}", query);
+
+                return await _context.Messages
+                    .Where(m => conversationIds.Contains(m.ConversationId) &&
+                               !m.IsDeleted &&
+                               m.Content != null &&
+                               m.Content.ToLower().Contains(query.ToLower()) &&
+                               (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow))
+                    .Include(m => m.Sender)
+                    .Include(m => m.Conversation)
+                        .ThenInclude(c => c.Members)
+                            .ThenInclude(cm => cm.User)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching messages globally. Query={Query}", query);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<Attachment>> SearchAttachmentsAsync(List<int> conversationIds, string query, int pageSize)
+        {
+            try
+            {
+                _logger.LogInformation("Searching attachments globally with Query={Query}", query);
+
+                return await _context.Attachments
+                    .Include(a => a.Message)
+                        .ThenInclude(m => m.Conversation)
+                            .ThenInclude(c => c.Members)
+                                .ThenInclude(cm => cm.User)
+                    .Where(a => a.Message != null &&
+                               conversationIds.Contains(a.Message.ConversationId) &&
+                               !a.Message.IsDeleted &&
+                               a.FileName.ToLower().Contains(query.ToLower()))
+                    .OrderByDescending(a => a.UploadedAt)
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching attachments globally. Query={Query}", query);
+                throw;
+            }
+        }
     }
 }

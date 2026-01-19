@@ -11,5 +11,7 @@ namespace Core.Interfaces.IRepositories
         Task<IEnumerable<MessageReadStatus>> GetMessageReadStatusesAsync(int messageId);
         Task<IEnumerable<Message>> SearchMessagesAsync(int conversationId, string query);
         Task<IEnumerable<Message>> GetPinnedMessagesAsync(int conversationId);
+        Task<IEnumerable<Message>> SearchMessagesGloballyAsync(List<int> conversationIds, string query, int pageSize);
+        Task<IEnumerable<Attachment>> SearchAttachmentsAsync(List<int> conversationIds, string query, int pageSize);
     }
 }

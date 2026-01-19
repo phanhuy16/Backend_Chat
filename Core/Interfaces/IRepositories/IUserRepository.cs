@@ -9,5 +9,7 @@ namespace Core.Interfaces.IRepositories
         Task<User?> GetByPasswordResetTokenAsync(string token);
         Task<User?> GetByFacebookIdAsync(string facebookId);
         Task<IEnumerable<User>> SearchUsersAsync(string searchTerm);
+        Task<IEnumerable<User>> SearchUsersAsync(string searchTerm, int pageSize);
+        Task<IEnumerable<User>> GetContactsAsync(int userId);
     }
 }

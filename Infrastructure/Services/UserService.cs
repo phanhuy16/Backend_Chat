@@ -269,7 +269,9 @@ namespace Infrastructure.Services
                 LastActiveAt = user.UpdatedAt,
                 LastSeenPrivacy = user.LastSeenPrivacy,
                 OnlineStatusPrivacy = user.OnlineStatusPrivacy,
-                ReadReceiptsEnabled = user.ReadReceiptsEnabled
+                ReadReceiptsEnabled = user.ReadReceiptsEnabled,
+                CreatedAt = user.CreatedAt,
+                PhoneNumber = user.PhoneNumber
             };
         }
     }
