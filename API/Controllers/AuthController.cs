@@ -255,6 +255,99 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Enable 2FA
+        /// </summary>
+        [HttpPost("enable-2fa")]
+        [Authorize]
+        public async Task<IActionResult> EnableTwoFactor()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId <= 0) return Unauthorized("User not found");
+
+                var result = await _authService.EnableTwoFactorAsync(userId);
+                if (result == null) return BadRequest("Could not generate 2FA key");
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enabling 2FA");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Verify 2FA Setup
+        /// </summary>
+        [HttpPost("verify-2fa-setup")]
+        [Authorize]
+        public async Task<IActionResult> VerifyTwoFactorSetup([FromBody] VerifyTwoFactorRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId <= 0) return Unauthorized("User not found");
+
+                var result = await _authService.VerifyTwoFactorSetupAsync(userId, request);
+                if (!result.Success) return BadRequest(result);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying 2FA setup");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Disable 2FA
+        /// </summary>
+        [HttpPost("disable-2fa")]
+        [Authorize]
+        public async Task<IActionResult> DisableTwoFactor()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId <= 0) return Unauthorized("User not found");
+
+                var result = await _authService.DisableTwoFactorAsync(userId);
+                if (!result) return BadRequest("Failed to disable 2FA");
+
+                return Ok(new { success = true, message = "2FA disabled successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error disabling 2FA");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Verify 2FA during Login
+        /// </summary>
+        [HttpPost("verify-2fa-login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyTwoFactorLogin([FromBody] TwoFactorLoginRequest request)
+        {
+            try
+            {
+                var result = await _authService.VerifyTwoFactorLoginAsync(request);
+                if (!result.Success) return BadRequest(result);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error verifying 2FA login");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
         /// Verify token
         /// </summary>
         [HttpGet("verify")]

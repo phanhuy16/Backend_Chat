@@ -76,6 +76,16 @@ namespace Infrastructure.Services
                     return new AuthResponse { Success = false, Message = "Invalid username or password" };
                 }
 
+                if (await _userManager.GetTwoFactorEnabledAsync(user))
+                {
+                    return new AuthResponse
+                    {
+                        Success = true,
+                        Message = "2FA required",
+                        RequiresTwoFactor = true
+                    };
+                }
+
                 // Generate tokens
                 var token = await GenerateJwtTokenAsync(user);
                 var refreshToken = GenerateRefreshToken();
@@ -505,6 +515,93 @@ namespace Infrastructure.Services
                 _logger.LogError(ex, "Error in ResetPasswordAsync");
                 return new AuthResponse { Success = false, Message = "Có lỗi xảy ra khi đặt lại mật khẩu" };
             }
+        }
+
+        public async Task<EnableTwoFactorResponse?> EnableTwoFactorAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) return null;
+
+            // Reset key to ensure security (or create if null)
+            await _userManager.ResetAuthenticatorKeyAsync(user);
+            var key = await _userManager.GetAuthenticatorKeyAsync(user);
+
+            var email = user.Email;
+            var appName = "ChatApp";
+            var authenticatorUri = $"otpauth://totp/{appName}:{email}?secret={key}&issuer={appName}&digits=6";
+
+            return new EnableTwoFactorResponse
+            {
+                SharedKey = key!,
+                AuthenticatorUri = authenticatorUri
+            };
+        }
+
+        public async Task<AuthResponse> VerifyTwoFactorSetupAsync(int userId, VerifyTwoFactorRequest request)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) return new AuthResponse { Success = false, Message = "User not found" };
+
+            // Verify the code against the stored key
+            var isTokenValid = await _userManager.VerifyTwoFactorTokenAsync(user, _userManager.Options.Tokens.AuthenticatorTokenProvider, request.Code);
+
+            if (!isTokenValid)
+            {
+                return new AuthResponse { Success = false, Message = "Invalid verification code" };
+            }
+
+            // Enable 2FA
+            await _userManager.SetTwoFactorEnabledAsync(user, true);
+
+            return new AuthResponse { Success = true, Message = "2FA has been enabled" };
+        }
+
+        public async Task<bool> DisableTwoFactorAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) return false;
+
+            var result = await _userManager.SetTwoFactorEnabledAsync(user, false);
+            return result.Succeeded;
+        }
+
+        public async Task<AuthResponse> VerifyTwoFactorLoginAsync(TwoFactorLoginRequest request)
+        {
+            var user = await _userRepository.GetByUsernameAsync(request.Username);
+            if (user == null)
+            {
+                return new AuthResponse { Success = false, Message = "Invalid username" };
+            }
+
+            // Verify the code
+            // Note: VerifyTwoFactorTokenAsync validates the code using the AuthenticatorTokenProvider
+            var isTokenValid = await _userManager.VerifyTwoFactorTokenAsync(user, _userManager.Options.Tokens.AuthenticatorTokenProvider, request.Code);
+
+            if (!isTokenValid)
+            {
+                return new AuthResponse { Success = false, Message = "Invalid 2FA code" };
+            }
+
+            // Generate tokens
+            var token = await GenerateJwtTokenAsync(user);
+            var refreshToken = GenerateRefreshToken();
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+            user.Status = StatusUser.Online;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userRepository.UpdateAsync(user);
+
+            return new AuthResponse
+            {
+                Success = true,
+                Message = "Login successful",
+                User = await MapToUserAuthDtoAsync(user),
+                Token = token,
+                RefreshToken = refreshToken,
+                ExpiresIn = DateTime.UtcNow.AddMinutes(30)
+            };
         }
 
 
