@@ -33,5 +33,6 @@ namespace Core.Entities
         public ICollection<MessageDeletedForUser> DeletedForUsers { get; set; } = new List<MessageDeletedForUser>();
         public Message? ParentMessage { get; set; }
         public ICollection<Message> Replies { get; set; } = new List<Message>();
+        public ICollection<MessageMention> Mentions { get; set; } = new List<MessageMention>();
     }
 }

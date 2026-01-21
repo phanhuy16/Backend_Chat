@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API", "API\API.csproj", "{4F44E933-1988-4EBE-9DC3-98060C594356}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatApp_Backend.Tests", "ChatApp_Backend.Tests\ChatApp_Backend.Tests.csproj", "{A33B678D-8DF9-4804-BD28-6896F524ED19}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{A33B678D-8DF9-4804-BD28-6896F524ED19}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

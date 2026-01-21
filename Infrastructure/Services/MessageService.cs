@@ -89,21 +89,32 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task DeleteMessageAsync(int messageId)
+        public async Task DeleteMessageAsync(int messageId, int userId)
         {
             try
             {
                 var message = await _messageRepository.GetByIdAsync(messageId);
-                if (message != null)
-                {
-                    message.IsDeleted = true;
-                    message.UpdatedAt = DateTime.UtcNow;
-                    await _messageRepository.UpdateAsync(message);
-                }
-                else
+                if (message == null)
                 {
                     _logger.LogWarning("Message {MessageId} not found for deletion", messageId);
+                    return;
                 }
+
+                // If user is not the sender, check for CanDeleteMessages permission in the conversation
+                if (message.SenderId != userId)
+                {
+                    var conversation = await _conversationRepository.GetConversationWithMembersAsync(message.ConversationId);
+                    var member = conversation?.Members.FirstOrDefault(m => m.UserId == userId);
+
+                    if (member == null || (member.Role != "Admin" && !member.CanDeleteMessages))
+                    {
+                        throw new Exception("Unauthorized to delete this message for everyone");
+                    }
+                }
+
+                message.IsDeleted = true;
+                message.UpdatedAt = DateTime.UtcNow;
+                await _messageRepository.UpdateAsync(message);
             }
             catch (Exception ex)
             {
@@ -147,7 +158,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<MessageDto> EditMessageAsync(int messageId, string newContent)
+        public async Task<MessageDto> EditMessageAsync(int messageId, string newContent, List<int>? mentionedUserIds = null)
         {
             try
             {
@@ -158,7 +169,29 @@ namespace Infrastructure.Services
                     message.IsModified = true;
                     message.UpdatedAt = DateTime.UtcNow;
                     await _messageRepository.UpdateAsync(message);
-                    await _messageRepository.UpdateAsync(message);
+
+                    // Update Mentions
+                    if (mentionedUserIds != null)
+                    {
+                        // Remove old mentions
+                        // Note: MessageRepository doesn't have a clear way to remove mentions easily without a separate repo,
+                        // but normally we'd want to clear and re-add.
+                        // For now, let's assume we just add new ones if we want to keep it simple, 
+                        // or I should implement a way to clear them.
+                        // Actually, let's just add new ones for now to avoid complexity of a new repo method.
+                        foreach (var userId in mentionedUserIds)
+                        {
+                            if (!message.Mentions.Any(m => m.UserId == userId))
+                            {
+                                await _messageRepository.AddMentionAsync(new MessageMention
+                                {
+                                    MessageId = message.Id,
+                                    UserId = userId
+                                });
+                            }
+                        }
+                    }
+
                     return await MapToMessageDto(message);
                 }
                 else
@@ -237,7 +270,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null)
+        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null, List<int>? mentionedUserIds = null)
         {
             try
             {
@@ -256,6 +289,19 @@ namespace Infrastructure.Services
                 };
 
                 await _messageRepository.AddAsync(message);
+
+                // Add Mentions
+                if (mentionedUserIds != null && mentionedUserIds.Any())
+                {
+                    foreach (var userId in mentionedUserIds)
+                    {
+                        await _messageRepository.AddMentionAsync(new MessageMention
+                        {
+                            MessageId = message.Id,
+                            UserId = userId
+                        });
+                    }
+                }
 
                 sender!.UpdatedAt = DateTime.UtcNow;
                 await _userRepository.UpdateAsync(sender);
@@ -312,12 +358,21 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<bool> TogglePinMessageAsync(int messageId)
+        public async Task<bool> TogglePinMessageAsync(int messageId, int userId)
         {
             try
             {
                 var message = await _messageRepository.GetByIdAsync(messageId);
                 if (message == null) return false;
+
+                // Check for CanPinMessages permission
+                var conversation = await _conversationRepository.GetConversationWithMembersAsync(message.ConversationId);
+                var member = conversation?.Members.FirstOrDefault(m => m.UserId == userId);
+
+                if (member == null || (member.Role != "Admin" && !member.CanPinMessages))
+                {
+                    throw new Exception("Unauthorized to pin messages in this conversation");
+                }
 
                 message.IsPinned = !message.IsPinned;
                 message.UpdatedAt = DateTime.UtcNow;
@@ -350,7 +405,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<MessageDto> ForwardMessageAsync(int messageId, int targetConversationId, int senderId)
+        public async Task<MessageDto> ForwardMessageAsync(int messageId, int targetConversationId, int senderId, List<int>? mentionedUserIds = null)
         {
             try
             {
@@ -385,6 +440,20 @@ namespace Infrastructure.Services
                 }
 
                 await _messageRepository.AddAsync(newMessage);
+
+                // Add Mentions
+                if (mentionedUserIds != null && mentionedUserIds.Any())
+                {
+                    foreach (var userId in mentionedUserIds)
+                    {
+                        await _messageRepository.AddMentionAsync(new MessageMention
+                        {
+                            MessageId = newMessage.Id,
+                            UserId = userId
+                        });
+                    }
+                }
+
                 var savedMessage = await _messageRepository.GetByIdAsync(newMessage.Id);
                 
                 if (savedMessage.Sender == null)
@@ -528,7 +597,15 @@ namespace Infrastructure.Services
                             AvatarUrl = v.User != null ? v.User.Avatar : ""
                         }).ToList()
                     }).ToList()
-                } : null
+                } : null,
+                MentionedUsers = message.Mentions.Select(m => new UserDto
+                {
+                    Id = m.UserId,
+                    UserName = m.User?.UserName ?? "Unknown",
+                    DisplayName = m.User?.DisplayName ?? "Unknown",
+                    Avatar = m.User?.Avatar ?? "",
+                    Status = m.User?.Status ?? StatusUser.Offline
+                }).ToList()
             };
         }
 

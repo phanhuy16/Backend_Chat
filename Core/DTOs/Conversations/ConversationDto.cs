@@ -10,7 +10,7 @@ namespace Core.DTOs.Conversations
         public ConversationType ConversationType { get; set; }
         public string GroupName { get; set; } = string.Empty;
         public int CreatedBy { get; set; }
-        public List<UserDto> Members { get; set; } = new List<UserDto>();
+        public List<ConversationMemberDto> Members { get; set; } = new List<ConversationMemberDto>();
         public List<MessageDto> Messages { get; set; } = new List<MessageDto>();
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

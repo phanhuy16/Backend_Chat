@@ -36,6 +36,8 @@ namespace Infrastructure.Repositories
                         .ThenInclude(p => p!.Options)
                             .ThenInclude(o => o.Votes)
                                 .ThenInclude(v => v!.User)
+                    .Include(m => m.Mentions)
+                        .ThenInclude(men => men.User)
                 .Where(m => m.ConversationId == conversationId && (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow))
                 .OrderByDescending(m => m.CreatedAt)
                     .Skip((pageNumber - 1) * pageSize)
@@ -74,6 +76,8 @@ namespace Infrastructure.Repositories
                         .ThenInclude(p => p!.Options)
                             .ThenInclude(o => o.Votes)
                                 .ThenInclude(v => v!.User)
+                    .Include(m => m.Mentions)
+                        .ThenInclude(men => men.User)
                 .FirstOrDefaultAsync(m => m.Id == messageId && (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow));
 
                 if (message == null)
@@ -150,6 +154,8 @@ namespace Infrastructure.Repositories
                     .Include(m => m.Reactions)
                     .Include(m => m.Attachments)
                     .Include(m => m.DeletedForUsers)
+                    .Include(m => m.Mentions)
+                        .ThenInclude(men => men.User)
                     .OrderByDescending(m => m.CreatedAt)
                     .ToListAsync();
             }
@@ -185,6 +191,8 @@ namespace Infrastructure.Repositories
                     .Include(m => m.Conversation)
                         .ThenInclude(c => c.Members)
                             .ThenInclude(cm => cm.User)
+                    .Include(m => m.Mentions)
+                        .ThenInclude(men => men.User)
                     .OrderByDescending(m => m.CreatedAt)
                     .Take(pageSize)
                     .ToListAsync();
@@ -218,6 +226,21 @@ namespace Infrastructure.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error searching attachments globally. Query={Query}", query);
+                throw;
+            }
+        }
+
+        public async Task AddMentionAsync(MessageMention mention)
+        {
+            try
+            {
+                await _context.MessageMentions.AddAsync(mention);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding MessageMention. MessageId={MessageId}, UserId={UserId}",
+                    mention.MessageId, mention.UserId);
                 throw;
             }
         }

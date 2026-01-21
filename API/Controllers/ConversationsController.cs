@@ -167,7 +167,8 @@ namespace API.Controllers
         {
             try
             {
-                await _conversationService.RemoveMemberFromConversationAsync(conversationId, userId);
+                var requestingUserId = GetCurrentUserId();
+                await _conversationService.RemoveMemberFromConversationAsync(conversationId, userId, requestingUserId);
 
                 await _hubContext.Clients.User(userId.ToString())
                     .SendAsync("RemovedFromConversation", new { ConversationId = conversationId });
@@ -209,6 +210,28 @@ namespace API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error transferring admin rights");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpPatch("{conversationId}/members/{targetUserId}/permissions")]
+        public async Task<IActionResult> UpdateMemberPermissions(int conversationId, int targetUserId, [FromBody] MemberPermissionsDto request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                await _conversationService.UpdateMemberPermissionsAsync(conversationId, userId, targetUserId, request);
+
+                // Notify user about permission change
+                await _hubContext.Clients.User(targetUserId.ToString())
+                    .SendAsync("PermissionsUpdated", new { ConversationId = conversationId, Permissions = request });
+
+                _logger.LogInformation("Permissions updated for user {TargetUserId} in conversation {ConversationId}", targetUserId, conversationId);
+                return Ok("Permissions updated successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating member permissions");
                 return StatusCode(500, new { message = ex.Message });
             }
         }

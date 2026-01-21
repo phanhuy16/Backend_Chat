@@ -9,5 +9,6 @@ namespace Core.DTOs.Messages
         public string? Content { get; set; }
         public MessageType MessageType { get; set; }
         public int? ParentMessageId { get; set; }
+        public List<int> MentionedUserIds { get; set; } = new List<int>();
     }
 }

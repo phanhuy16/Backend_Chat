@@ -27,6 +27,7 @@ namespace Infrastructure.Data
         public DbSet<Poll> Polls { get; set; } = null!;
         public DbSet<PollOption> PollOptions { get; set; } = null!;
         public DbSet<PollVote> PollVotes { get; set; } = null!;
+        public DbSet<MessageMention> MessageMentions { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -229,6 +230,17 @@ namespace Infrastructure.Data
                     .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Restrict);
                 // Ensure a user can only vote once per option (or poll? logic might handle multiple votes if allowed, but uniqueness per option/user is good)
                 entity.HasIndex(new[] { "PollOptionId", "UserId" }).IsUnique();
+            });
+
+            // MessageMention Configuration
+            modelBuilder.Entity<MessageMention>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Message).WithMany(m => m.Mentions)
+                    .HasForeignKey(e => e.MessageId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User).WithMany()
+                    .HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(new[] { "MessageId", "UserId" }).IsUnique();
             });
         }
     }

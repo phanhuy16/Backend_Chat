@@ -15,5 +15,6 @@ namespace Core.DTOs.ChatHub
         public int? ParentMessageId { get; set; }
         public ChatMessage? ParentMessage { get; set; }
         public PollDto? Poll { get; set; }
+        public List<int> MentionedUserIds { get; set; } = new List<int>();
     }
 }

@@ -173,7 +173,14 @@ namespace Infrastructure.Services
                         ConversationId = conversation.Id,
                         UserId = memberId,
                         Role = memberId == createdBy ? "Admin" : "Member",
-                        JoinedAt = DateTime.UtcNow
+                        JoinedAt = DateTime.UtcNow,
+                        // Creator gets all permissions
+                        CanChangeGroupInfo = memberId == createdBy,
+                        CanAddMembers = memberId == createdBy,
+                        CanRemoveMembers = memberId == createdBy,
+                        CanDeleteMessages = memberId == createdBy,
+                        CanPinMessages = memberId == createdBy,
+                        CanChangePermissions = memberId == createdBy
                     };
 
                     conversation.Members.Add(member);
@@ -316,7 +323,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task RemoveMemberFromConversationAsync(int conversationId, int userId)
+        public async Task RemoveMemberFromConversationAsync(int conversationId, int userId, int requestingUserId)
         {
             try
             {
@@ -324,6 +331,13 @@ namespace Infrastructure.Services
 
                 if (conversation != null)
                 {
+                    // Check if requesting user has permission to remove members
+                    var requestingMember = conversation.Members.FirstOrDefault(m => m.UserId == requestingUserId);
+                    if (requestingMember == null || (requestingMember.Role != "Admin" && !requestingMember.CanRemoveMembers))
+                    {
+                        throw new Exception("Unauthorized to remove members from this conversation");
+                    }
+
                     var member = conversation.Members.FirstOrDefault(m => m.UserId == userId);
                     if (member != null)
                     {
@@ -420,6 +434,41 @@ namespace Infrastructure.Services
             }
         }
 
+        public async Task UpdateMemberPermissionsAsync(int conversationId, int userId, int targetUserId, MemberPermissionsDto permissions)
+        {
+            try
+            {
+                var conversation = await _conversationRepository.GetConversationWithMembersAsync(conversationId);
+                if (conversation == null) throw new Exception("Conversation not found");
+
+                var requestingMember = conversation.Members.FirstOrDefault(m => m.UserId == userId);
+                if (requestingMember == null) throw new Exception("User not in conversation");
+
+                // Only Admin or someone with CanChangePermissions can update permissions
+                if (requestingMember.Role != "Admin" && !requestingMember.CanChangePermissions)
+                    throw new Exception("Unauthorized to change permissions");
+
+                var targetMember = conversation.Members.FirstOrDefault(m => m.UserId == targetUserId);
+                if (targetMember == null) throw new Exception("Target user not in conversation");
+
+                // Update permissions
+                targetMember.CanChangeGroupInfo = permissions.CanChangeGroupInfo;
+                targetMember.CanAddMembers = permissions.CanAddMembers;
+                targetMember.CanRemoveMembers = permissions.CanRemoveMembers;
+                targetMember.CanDeleteMessages = permissions.CanDeleteMessages;
+                targetMember.CanPinMessages = permissions.CanPinMessages;
+                targetMember.CanChangePermissions = permissions.CanChangePermissions;
+
+                await _conversationRepository.UpdateAsync(conversation);
+                _logger.LogInformation($"Permissions updated for user {targetUserId} in conversation {conversationId} by user {userId}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating member permissions: {ex.Message}");
+                throw;
+            }
+        }
+
         private ConversationDto MapToConversationDto(Conversations conversation, int? currentUserId = null)
         {
             var dto = new ConversationDto
@@ -430,13 +479,19 @@ namespace Infrastructure.Services
 
                 Members = conversation.Members
                     .Where(m => m.User != null)
-                    .Select(m => new UserDto
+                    .Select(m => new ConversationMemberDto
                     {
                         Id = m.User.Id,
                         UserName = m.User.UserName!,
                         DisplayName = m.User.DisplayName,
                         Avatar = m.User.Avatar ?? "",
-                        Status = m.User.Status,
+                        Role = m.Role,
+                        CanChangeGroupInfo = m.CanChangeGroupInfo,
+                        CanAddMembers = m.CanAddMembers,
+                        CanRemoveMembers = m.CanRemoveMembers,
+                        CanDeleteMessages = m.CanDeleteMessages,
+                        CanPinMessages = m.CanPinMessages,
+                        CanChangePermissions = m.CanChangePermissions
                     }).ToList(),
 
                 Messages = conversation.Messages?

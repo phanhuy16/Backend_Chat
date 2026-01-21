@@ -13,5 +13,6 @@ namespace Core.Interfaces.IRepositories
         Task<IEnumerable<Message>> GetPinnedMessagesAsync(int conversationId);
         Task<IEnumerable<Message>> SearchMessagesGloballyAsync(List<int> conversationIds, string query, int pageSize);
         Task<IEnumerable<Attachment>> SearchAttachmentsAsync(List<int> conversationIds, string query, int pageSize);
+        Task AddMentionAsync(MessageMention mention);
     }
 }

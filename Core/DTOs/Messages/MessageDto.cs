@@ -29,5 +29,6 @@ namespace Core.DTOs.Messages
         public DateTime? ScheduledAt { get; set; }
         public int? PollId { get; set; }
         public PollDto? Poll { get; set; }
+        public List<UserDto> MentionedUsers { get; set; } = new List<UserDto>();
     }
 }

@@ -77,7 +77,7 @@ namespace API.Hubs
         }
 
         // Send Message
-        public async Task SendMessage(int conversationId, int senderId, string content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null)
+        public async Task SendMessage(int conversationId, int senderId, string content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null, List<int>? mentionedUserIds = null)
         {
             try
             {
@@ -103,7 +103,7 @@ namespace API.Hubs
                     }
                 }
 
-                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType, parentMessageId, scheduledAt);
+                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType, parentMessageId, scheduledAt, mentionedUserIds);
 
                 // For scheduled messages, don't broadcast immediately to other users
                 if (scheduledAt != null && scheduledAt > DateTime.UtcNow)
@@ -132,12 +132,31 @@ namespace API.Hubs
                         Content = messageDto.ParentMessage.Content,
                         SenderName = messageDto.ParentMessage.Sender.DisplayName
                     } : null,
-                    Poll = messageDto.Poll
+                    Poll = messageDto.Poll,
+                    MentionedUserIds = mentionedUserIds ?? new List<int>()
                 };
 
                 string groupName = $"conversation_{conversationId}";
 
                 await Clients.Group(groupName).SendAsync("ReceiveMessage", chatMessage);
+
+                // Notify mentioned users specifically if they are not the sender
+                if (mentionedUserIds != null && mentionedUserIds.Any())
+                {
+                    foreach (var userId in mentionedUserIds)
+                    {
+                        if (userId != senderId)
+                        {
+                            await Clients.User(userId.ToString()).SendAsync("UserMentioned", new
+                            {
+                                ConversationId = conversationId,
+                                MessageId = messageDto.Id,
+                                SenderName = sender?.DisplayName ?? sender?.UserName,
+                                Content = content
+                            });
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -219,7 +238,7 @@ namespace API.Hubs
         {
             try
             {
-                await _messageService.DeleteMessageAsync(messageId);
+                await _messageService.DeleteMessageAsync(messageId, userId);
 
                 string groupName = $"conversation_{conversationId}";
 
@@ -397,11 +416,11 @@ namespace API.Hubs
         }
 
         // Pin message
-        public async Task PinMessage(int messageId, int conversationId)
+        public async Task PinMessage(int messageId, int conversationId, int userId)
         {
             try
             {
-                var result = await _messageService.TogglePinMessageAsync(messageId);
+                var result = await _messageService.TogglePinMessageAsync(messageId, userId);
                 if (result)
                 {
                     string groupName = $"conversation_{conversationId}";
@@ -423,4 +442,3 @@ namespace API.Hubs
         }
     }
 }
-
