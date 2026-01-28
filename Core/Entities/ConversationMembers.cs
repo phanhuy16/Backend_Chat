@@ -18,6 +18,7 @@ namespace Core.Entities
         public bool CanDeleteMessages { get; set; } = false;
         public bool CanPinMessages { get; set; } = false;
         public bool CanChangePermissions { get; set; } = false;
+        public bool IsArchived { get; set; } = false;
 
         // Foreign keys
         public Conversations Conversation { get; set; } = null!;

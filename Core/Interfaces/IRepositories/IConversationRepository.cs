@@ -11,6 +11,7 @@ namespace Core.Interfaces.IRepositories
         Task<Conversations> GetDirectConversationAsync(int userId1, int userId2);
 
         Task<IEnumerable<Conversations>> GetUserConversationsAsync(int userId);
+        Task<IEnumerable<Conversations>> GetUserArchivedConversationsAsync(int userId);
         Task<IEnumerable<Message>> GetConversationMessagesAsync(
             int conversationId,
             int pageNumber = 1,

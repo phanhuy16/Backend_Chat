@@ -65,6 +65,21 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet("user/{userId}/archived")]
+        public async Task<IActionResult> GetUserArchivedConversations(int userId)
+        {
+            try
+            {
+                var conversations = await _conversationService.GetUserArchivedConversationsAsync(userId);
+                return Ok(conversations);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching archived conversations for user {UserId}", userId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         [HttpPost("direct")]
         public async Task<IActionResult> CreateDirectConversation([FromBody] CreateDirectConversationRequest request)
         {
@@ -328,6 +343,29 @@ namespace API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error toggling pin status for conversation {ConversationId}", conversationId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPost("{conversationId}/archive/{userId}")]
+        public async Task<IActionResult> ToggleArchive(int conversationId, int userId)
+        {
+            try
+            {
+                var isArchived = await _conversationService.ToggleArchiveConversationAsync(conversationId, userId);
+
+                // Notify user via SignalR
+                await _hubContext.Clients.User(userId.ToString())
+                    .SendAsync("ConversationArchiveStatusChanged", new { ConversationId = conversationId, IsArchived = isArchived });
+
+                _logger.LogInformation("Conversation {ConversationId} archive status toggled to {IsArchived} for user {UserId}",
+                    conversationId, isArchived, userId);
+
+                return Ok(new { isArchived });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling archive status for conversation {ConversationId}", conversationId);
                 return StatusCode(500, "Internal server error");
             }
         }

@@ -82,7 +82,7 @@ namespace Infrastructure.Repositories
                     .Include(c => c.Members)
                     .ThenInclude(m => m.User)
                     .Where(c => c.Members
-                    .Any(m => m.UserId == userId))
+                    .Any(m => m.UserId == userId && !m.IsArchived))
                     .OrderByDescending(c => c.UpdatedAt).
                     ToListAsync();
 
@@ -110,6 +110,47 @@ namespace Infrastructure.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching conversations for user {UserId}", userId);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<Conversations>> GetUserArchivedConversationsAsync(int userId)
+        {
+            try
+            {
+                _logger.LogInformation("Fetching archived conversations for user {UserId}", userId);
+                var conversations = await _context.Conversations
+                    .Include(c => c.Members)
+                    .ThenInclude(m => m.User)
+                    .Where(c => c.Members
+                    .Any(m => m.UserId == userId && m.IsArchived))
+                    .OrderByDescending(c => c.UpdatedAt).
+                    ToListAsync();
+
+                if (!conversations.Any())
+                {
+                    _logger.LogWarning("No archived conversations found for user {UserId}", userId);
+                }
+
+                foreach (var conversation in conversations)
+                {
+                    var latestMessages = await _context.Messages
+                        .Where(m => m.ConversationId == conversation.Id && (m.ScheduledAt == null || m.ScheduledAt <= DateTime.UtcNow))
+                        .OrderByDescending(m => m.CreatedAt)
+                        .Take(1)
+                        .Include(m => m.Sender)
+                        .Include(m => m.Reactions)
+                        .Include(m => m.Attachments)
+                        .ToListAsync();
+
+                    conversation.Messages = latestMessages;
+                }
+
+                return conversations;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching archived conversations for user {UserId}", userId);
                 throw;
             }
         }

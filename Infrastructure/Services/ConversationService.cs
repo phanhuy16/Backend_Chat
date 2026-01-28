@@ -265,6 +265,20 @@ namespace Infrastructure.Services
             }
         }
 
+        public async Task<IEnumerable<ConversationDto>> GetUserArchivedConversationsAsync(int userId)
+        {
+            try
+            {
+                var conversations = await _conversationRepository.GetUserArchivedConversationsAsync(userId);
+                return conversations.Select(c => MapToConversationDto(c, userId)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error getting user archived conversations: {ex.Message}");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Leave conversation (any member can)
         /// </summary>
@@ -319,6 +333,27 @@ namespace Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Error toggling pin status: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<bool> ToggleArchiveConversationAsync(int conversationId, int userId)
+        {
+            try
+            {
+                var member = await _conversationRepository.GetConversationMemberAsync(conversationId, userId);
+                if (member == null)
+                    throw new Exception("Member not found in conversation");
+
+                member.IsArchived = !member.IsArchived;
+                await _memberRepository.UpdateAsync(member);
+
+                _logger.LogInformation($"Conversation {conversationId} archive status toggled to {member.IsArchived} for user {userId}");
+                return member.IsArchived;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error toggling archive status: {ex.Message}");
                 throw;
             }
         }
@@ -524,6 +559,7 @@ namespace Infrastructure.Services
                 if (currentMember != null)
                 {
                     dto.IsPinned = currentMember.IsPinned;
+                    dto.IsArchived = currentMember.IsArchived;
                 }
             }
 

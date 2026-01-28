@@ -8,6 +8,7 @@ namespace Core.Interfaces.IServices
     {
         Task<ConversationDto> GetConversationAsync(int conversationId);
         Task<IEnumerable<ConversationDto>> GetUserConversationsAsync(int userId);
+        Task<IEnumerable<ConversationDto>> GetUserArchivedConversationsAsync(int userId);
         Task<ConversationDto> CreateDirectConversationAsync(int userId1, int userId2);
         Task<ConversationDto> CreateGroupConversationAsync(string groupName, int createdBy, List<int> memberIds);
         Task AddMemberToConversationAsync(int conversationId, int userId);
@@ -16,6 +17,7 @@ namespace Core.Interfaces.IServices
         Task DeleteGroupConversationAsync(int conversationId, int requestingUserId);
         Task LeaveConversationAsync(int conversationId, int userId);
         Task<bool> TogglePinConversationAsync(int conversationId, int userId);
+        Task<bool> ToggleArchiveConversationAsync(int conversationId, int userId);
         Task<IEnumerable<LinkDto>> GetConversationLinksAsync(int conversationId);
         Task UpdateMemberPermissionsAsync(int conversationId, int userId, int targetUserId, MemberPermissionsDto permissions);
     }
