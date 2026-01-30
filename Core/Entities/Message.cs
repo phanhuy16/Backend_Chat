@@ -19,6 +19,11 @@ namespace Core.Entities
         public int? ForwardedFromId { get; set; }
         public DateTime? ScheduledAt { get; set; }
 
+        // Self-destructing message fields
+        public int? SelfDestructAfterSeconds { get; set; }  // Time in seconds before message deletes after being viewed
+        public DateTime? ViewedAt { get; set; }  // When recipient first viewed the message
+        public DateTime? ExpiresAt { get; set; }  // Calculated expiration time (ViewedAt + SelfDestructAfterSeconds)
+
         // Foreign keys
         public Conversations Conversation { get; set; } = null!;
         public User Sender { get; set; } = null!;

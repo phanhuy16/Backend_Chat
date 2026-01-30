@@ -29,6 +29,12 @@ namespace Core.DTOs.Messages
         public DateTime? ScheduledAt { get; set; }
         public int? PollId { get; set; }
         public PollDto? Poll { get; set; }
+
+        // Self-destructing message fields
+        public int? SelfDestructAfterSeconds { get; set; }
+        public DateTime? ViewedAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+
         public List<UserDto> MentionedUsers { get; set; } = new List<UserDto>();
     }
 }

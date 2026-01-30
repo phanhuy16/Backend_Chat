@@ -77,7 +77,7 @@ namespace API.Hubs
         }
 
         // Send Message
-        public async Task SendMessage(int conversationId, int senderId, string content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null, List<int>? mentionedUserIds = null)
+        public async Task SendMessage(int conversationId, int senderId, string content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null, List<int>? mentionedUserIds = null, int? selfDestructAfterSeconds = null)
         {
             try
             {
@@ -103,7 +103,7 @@ namespace API.Hubs
                     }
                 }
 
-                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType, parentMessageId, scheduledAt, mentionedUserIds);
+                var messageDto = await _messageService.SendMessageAsync(conversationId, senderId, content, messageType, parentMessageId, scheduledAt, mentionedUserIds, selfDestructAfterSeconds);
 
                 // For scheduled messages, don't broadcast immediately to other users
                 if (scheduledAt != null && scheduledAt > DateTime.UtcNow)

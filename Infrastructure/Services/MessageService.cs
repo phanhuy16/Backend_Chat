@@ -270,7 +270,7 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null, List<int>? mentionedUserIds = null)
+        public async Task<MessageDto> SendMessageAsync(int conversationId, int senderId, string? content, MessageType messageType, int? parentMessageId = null, DateTime? scheduledAt = null, List<int>? mentionedUserIds = null, int? selfDestructAfterSeconds = null)
         {
             try
             {
@@ -285,7 +285,8 @@ namespace Infrastructure.Services
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     ParentMessageId = parentMessageId,
-                    ScheduledAt = scheduledAt
+                    ScheduledAt = scheduledAt,
+                    SelfDestructAfterSeconds = selfDestructAfterSeconds  // Set self-destruct timer
                 };
 
                 await _messageRepository.AddAsync(message);
@@ -390,6 +391,17 @@ namespace Infrastructure.Services
         {
             try
             {
+                var message = await _messageRepository.GetByIdAsync(messageId);
+
+                // Handle self-destructing message: set ViewedAt and ExpiresAt when first viewed
+                if (message != null && message.SelfDestructAfterSeconds.HasValue && !message.ViewedAt.HasValue && message.SenderId != userId)
+                {
+                    message.ViewedAt = DateTime.UtcNow;
+                    message.ExpiresAt = DateTime.UtcNow.AddSeconds(message.SelfDestructAfterSeconds.Value);
+                    message.UpdatedAt = DateTime.UtcNow;
+                    await _messageRepository.UpdateAsync(message);
+                }
+
                 var readStatus = new MessageReadStatus
                 {
                     MessageId = messageId,
@@ -605,7 +617,12 @@ namespace Infrastructure.Services
                     DisplayName = m.User?.DisplayName ?? "Unknown",
                     Avatar = m.User?.Avatar ?? "",
                     Status = m.User?.Status ?? StatusUser.Offline
-                }).ToList()
+                }).ToList(),
+
+                // Self-destructing message fields
+                SelfDestructAfterSeconds = message.SelfDestructAfterSeconds,
+                ViewedAt = message.ViewedAt.HasValue ? DateTime.SpecifyKind(message.ViewedAt.Value, DateTimeKind.Utc) : null,
+                ExpiresAt = message.ExpiresAt.HasValue ? DateTime.SpecifyKind(message.ExpiresAt.Value, DateTimeKind.Utc) : null
             };
         }
 

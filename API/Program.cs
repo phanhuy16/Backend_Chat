@@ -151,6 +151,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IPollService, PollService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddHostedService<ScheduledMessageWorker>();
+builder.Services.AddHostedService<SelfDestructMessageWorker>();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" };
 

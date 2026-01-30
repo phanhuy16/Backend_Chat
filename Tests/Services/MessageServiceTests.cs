@@ -65,11 +65,23 @@ namespace ChatApp_Backend.Tests.Services
         {
             // Arrange
             int messageId = 1;
-            var message = new Message { Id = messageId, IsPinned = false };
+            int userId = 1;
+            int conversationId = 1;
+            var message = new Message { Id = messageId, IsPinned = false, ConversationId = conversationId };
+            var conversation = new Conversations
+            {
+                Id = conversationId,
+                Members = new List<ConversationMembers>
+                {
+                    new ConversationMembers { UserId = userId, Role = "Admin", CanPinMessages = true }
+                }
+            };
+
             _messageRepoMock.Setup(r => r.GetByIdAsync(messageId)).ReturnsAsync(message);
+            _conversationRepoMock.Setup(r => r.GetConversationWithMembersAsync(conversationId)).ReturnsAsync(conversation);
 
             // Act
-            var result = await _messageService.TogglePinMessageAsync(messageId);
+            var result = await _messageService.TogglePinMessageAsync(messageId, userId);
 
             // Assert
             Assert.True(result);
@@ -82,10 +94,11 @@ namespace ChatApp_Backend.Tests.Services
         {
             // Arrange
             int messageId = 999;
+            int userId = 1;
             _messageRepoMock.Setup(r => r.GetByIdAsync(messageId)).ReturnsAsync((Message)null!);
 
             // Act
-            var result = await _messageService.TogglePinMessageAsync(messageId);
+            var result = await _messageService.TogglePinMessageAsync(messageId, userId);
 
             // Assert
             Assert.False(result);
