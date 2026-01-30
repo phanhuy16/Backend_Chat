@@ -313,6 +313,13 @@ namespace API.Hubs
         {
             try
             {
+                var user = await _userService.GetUserByIdAsync(userId);
+                if (user == null || !user.ReadReceiptsEnabled)
+                {
+                    _logger.LogInformation($"Skip broadcasting MessageRead for user {userId} due to privacy settings");
+                    return;
+                }
+
                 await _messageService.MarkAsReadAsync(messageId, userId);
                 string groupName = $"conversation_{conversationId}";
 

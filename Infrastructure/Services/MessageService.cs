@@ -391,6 +391,13 @@ namespace Infrastructure.Services
         {
             try
             {
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user == null || !user.ReadReceiptsEnabled)
+                {
+                    _logger.LogInformation("Skip marking message {MessageId} as read for user {UserId} (Privacy settings or user not found)", messageId, userId);
+                    return;
+                }
+
                 var message = await _messageRepository.GetByIdAsync(messageId);
 
                 // Handle self-destructing message: set ViewedAt and ExpiresAt when first viewed
@@ -582,7 +589,7 @@ namespace Infrastructure.Services
                 ForwardedFromId = message.ForwardedFromId,
                 ScheduledAt = message.ScheduledAt.HasValue ? DateTime.SpecifyKind(message.ScheduledAt.Value, DateTimeKind.Utc) : null,
                 IsReadByMe = currentUserId != 0 && readStatuses.Any(s => s.UserId == currentUserId),
-                ReadCount = readStatuses.Count(),
+                ReadCount = await CalculateReadCountAsync(readStatuses, currentUserId),
                 PollId = message.PollId,
                 Poll = message.Poll != null ? new PollDto
                 {
@@ -624,6 +631,31 @@ namespace Infrastructure.Services
                 ViewedAt = message.ViewedAt.HasValue ? DateTime.SpecifyKind(message.ViewedAt.Value, DateTimeKind.Utc) : null,
                 ExpiresAt = message.ExpiresAt.HasValue ? DateTime.SpecifyKind(message.ExpiresAt.Value, DateTimeKind.Utc) : null
             };
+        }
+
+        private async Task<int> CalculateReadCountAsync(IEnumerable<MessageReadStatus> readStatuses, int currentUserId)
+        {
+            if (currentUserId == 0) return readStatuses.Count();
+
+            var currentUser = await _userRepository.GetByIdAsync(currentUserId);
+            if (currentUser == null || !currentUser.ReadReceiptsEnabled)
+            {
+                return 0;
+            }
+
+            // Filter read statuses to only include users who have ReadReceiptsEnabled = true
+            // We need to ensure User is included in readStatuses
+            int count = 0;
+            foreach (var status in readStatuses)
+            {
+                var reader = status.User ?? await _userRepository.GetByIdAsync(status.UserId);
+                if (reader != null && reader.ReadReceiptsEnabled)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private ReactionDto MapToReactionDto(MessageReaction reaction)
