@@ -370,7 +370,11 @@ namespace Infrastructure.Services
                 var conversation = await _conversationRepository.GetConversationWithMembersAsync(message.ConversationId);
                 var member = conversation?.Members.FirstOrDefault(m => m.UserId == userId);
 
-                if (member == null || (member.Role != "Admin" && !member.CanPinMessages))
+                // For Direct conversations, both participants can pin by default
+                bool canPin = conversation?.ConversationType == ConversationType.Direct ||
+                             (member != null && (member.Role == "Admin" || member.CanPinMessages));
+
+                if (!canPin)
                 {
                     throw new Exception("Unauthorized to pin messages in this conversation");
                 }

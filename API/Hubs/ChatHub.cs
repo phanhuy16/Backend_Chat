@@ -221,6 +221,7 @@ namespace API.Hubs
                 await Clients.Group(groupName).SendAsync("MessageEdited", new
                 {
                     MessageId = messageId,
+                    ConversationId = conversationId,
                     NewContent = newContent,
                     EditedAt = DateTime.UtcNow,
                     EditedBy = userId
@@ -245,6 +246,7 @@ namespace API.Hubs
                 await Clients.Group(groupName).SendAsync("MessageDeleted", new
                 {
                     MessageId = messageId,
+                    ConversationId = conversationId,
                     DeletedAt = DateTime.UtcNow,
                     DeletedBy = userId
                 });

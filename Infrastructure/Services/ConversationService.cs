@@ -98,7 +98,9 @@ namespace Infrastructure.Services
                     ConversationId = conversation.Id,
                     UserId = userId1,
                     Role = "Member",
-                    JoinedAt = DateTime.UtcNow
+                    JoinedAt = DateTime.UtcNow,
+                    CanPinMessages = true,
+                    CanDeleteMessages = true
                 };
 
                 var member2 = new ConversationMembers
@@ -106,7 +108,9 @@ namespace Infrastructure.Services
                     ConversationId = conversation.Id,
                     UserId = userId2,
                     Role = "Member",
-                    JoinedAt = DateTime.UtcNow
+                    JoinedAt = DateTime.UtcNow,
+                    CanPinMessages = true,
+                    CanDeleteMessages = true
                 };
 
                 // Step 3: Add members to conversation object
